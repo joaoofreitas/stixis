@@ -1,75 +1,84 @@
+import argparse
 from pathlib import Path
 from stixis_processor import StixisProcessor
-from image_handler import ImageHandler
-from cli_utils import parse_args, prompt_for_parameters, run_grid_search
+from stixis_color_processor import StixisColorProcessor
 from PIL import Image
-import argparse
 
 def main():
+    parser = argparse.ArgumentParser(description='Stixis - Circle Pattern Generator')
+    parser.add_argument('--input', type=str, help='Input image path')
+    parser.add_argument('--output', type=str, help='Output image path')
+    parser.add_argument('--colors', type=int, default=5, help='Number of grayscale colors (2-10)')
+    parser.add_argument('--grid-size', type=int, help='Number of grid divisions (4+)')
+    parser.add_argument('--smooth', action='store_true', help='Apply smoothing')
+    parser.add_argument('--sigma', type=float, default=1.5, help='Smoothing sigma value')
+    parser.add_argument('--contrast', action='store_true', help='Enhance contrast')
+    parser.add_argument('--invert', action='store_true', help='Invert colors')
+    parser.add_argument('--mode', choices=['grayscale', 'color'], default='grayscale',
+                      help='Processing mode (grayscale/color)')
+    parser.add_argument('--palette-size', type=int, default=8,
+                      help='Number of colors in palette (color mode only)')
+    parser.add_argument('--mapping', choices=['linear', 'logarithmic', 'exponential', 
+                                            'sigmoid', 'power', 'adaptive'],
+                      default='linear', help='Brightness mapping mode')
+    parser.add_argument('--gamma', type=float, default=2.2,
+                      help='Gamma value for power mapping')
+
+    args = parser.parse_args()
+
+    if not args.input:
+        parser.print_help()
+        return
+
+    # Validate input path
+    input_path = Path(args.input)
+    if not input_path.exists():
+        print(f"Error: Input file '{args.input}' does not exist")
+        return
+
+    # Set default output path if not provided
+    if not args.output:
+        output_path = input_path.with_stem(input_path.stem + "_stixis")
+    else:
+        output_path = Path(args.output)
+
+    # Load input image
     try:
-        # Parse command line arguments
-        parser = argparse.ArgumentParser(description='Process images with circle pattern effect')
-        parser.add_argument('--invert', action='store_true',
-                           help='Invert colors (white background, black circles)')
-        args = parser.parse_args()
-        
-        # If no arguments provided, use interactive mode
-        if args is None:
-            params = prompt_for_parameters()
-            
-            if params["mode"] == "grid_search":
-                run_grid_search(params["image_path"], params["output_dir"])
-                return 0
-            
-            # Use provided parameters for single process
-            args = argparse.Namespace(
-                image_path=params["image_path"],
-                colors=params["params"]["num_colors"],
-                grid_size=params["params"]["grid_size"],
-                smooth=params["params"]["smoothing"],
-                contrast=params["params"]["enhance_contrast"],
-                output_dir=params["output_dir"],
-                grid_search=False,
-                invert=params["params"]["invert"]
-            )
-        
-        # Handle grid search mode
-        if args.grid_search:
-            run_grid_search(args.image_path, args.output_dir)
-            return 0
-        
-        # Single image processing
-        image_handler = ImageHandler(args.output_dir)
+        input_image = Image.open(input_path)
+    except Exception as e:
+        print(f"Error loading image: {e}")
+        return
+
+    # Create appropriate processor
+    if args.mode == 'color':
+        processor = StixisColorProcessor(
+            num_colors=args.colors,
+            grid_size=args.grid_size,
+            smoothing=args.smooth,
+            smoothing_sigma=args.sigma,
+            enhance_contrast=args.contrast,
+            color_palette_size=args.palette_size,
+            invert=args.invert
+        )
+    else:
         processor = StixisProcessor(
             num_colors=args.colors,
             grid_size=args.grid_size,
             smoothing=args.smooth,
-            smoothing_sigma=args.smoothing_sigma,
+            smoothing_sigma=args.sigma,
             enhance_contrast=args.contrast,
-            invert=args.invert
+            invert=args.invert,
+            brightness_mapping=args.mapping,
+            gamma=args.gamma
         )
-        
-        # Process image
-        input_image = Image.open(args.image_path)
-        processed_image = processor.process(input_image)
-        
-        # Save result
-        output_path = image_handler.save_image(
-            processed_image,
-            Path(args.image_path).stem,
-            args.colors,
-            processor.actual_divisions,
-            args.smooth,
-            args.contrast
-        )
-        
-        print(f"Processed image saved as {output_path}")
-        
+
+    # Process image
+    try:
+        output_image = processor.process(input_image)
+        output_image.save(output_path)
+        print(f"Processed image saved to: {output_path}")
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return 1
-    
-    return 0
+        print(f"Error processing image: {e}")
 
 if __name__ == "__main__":
-    exit(main())
+    main()

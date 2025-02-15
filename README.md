@@ -2,40 +2,7 @@
 
 Stixis is a Python-based image processing tool that transforms images into artistic circle patterns. It offers both a web interface and command-line functionality.
 
-## Features
-
-### Basic Controls
-- Adjustable number of colors/divisions
-- Custom grid size option
-- Smoothing with adjustable sigma
-- Contrast enhancement
-- Color inversion (black/white background toggle)
-
-### Advanced Features
-- Multiple brightness mapping modes:
-  - Linear (default)
-  - Logarithmic (better for dark details)
-  - Exponential (emphasizes bright areas)
-  - Sigmoid (smooth transition)
-  - Power/Gamma (traditional photo correction)
-  - Adaptive (context-aware)
-- Color processing mode:
-  - Extracts dominant colors from the image
-  - Adjustable color palette size (4-16 colors)
-  - Maintains image color scheme in circle patterns
-
-### Processing Modes
-1. **Grayscale (Classic)**
-   - Black and white circle patterns
-   - Configurable brightness mapping
-   - Traditional dot pattern style
-
-2. **Color (Experimental)**
-   - Color-aware circle patterns
-   - Automatic color palette extraction
-   - Preserves image color themes
-
-## Artistic Showcase
+## Examples
 
 ### The Skeleton Smoking Cigarette Transformation
 <div align="center">
@@ -51,44 +18,41 @@ Stixis is a Python-based image processing tool that transforms images into artis
   </table>
 </div>
 
-#### Parameters Used
-```python
-processor = StixisProcessor(
-    num_colors=10,          # Higher color count for detailed night sky
-    grid_size=75,           # Fine grid for intricate swirls
-    smoothing=True,         # Smooth transitions between circles
-    smoothing_sigma=1.5,    # Moderate smoothing for painterly effect
-    enhance_contrast=True,  # Emphasize the dramatic sky
-    invert=False,          # Preserve original light/dark relationship
-    brightness_mapping='logarithmic',  # Capture details in darker areas
-    gamma=2.2              # Standard gamma for natural appearance
-)
-```
+### Web Interface
 
-Try these settings with the CLI:
-```bash
-python main.py --input starry_night.jpg \
-               --num-colors 10 \
-               --grid-size 75 \
-               --smoothing \
-               --sigma 1.5 \
-               --contrast \
-               --mapping logarithmic \
-               --gamma 2.2
-```
+![Web Interface on Mobile Phone](docs/images/WebOnMobile.JPG)
 
-Or via the API:
-```bash
-curl -X POST http://localhost:8000/process \
-    -F "file=@starry_night.jpg" \
-    -F "num_colors=10" \
-    -F "grid_size=75" \
-    -F "use_smoothing=true" \
-    -F "smoothing_sigma=1.5" \
-    -F "enhance_contrast=true" \
-    -F "brightness_mapping=logarithmic" \
-    -F "gamma=2.2"
-```
+## Features
+
+### Basic Controls
+- Adjustable number of colors/divisions (2-10)
+- Custom grid size option (4+)
+- Smoothing with adjustable sigma
+- Contrast enhancement
+- Color inversion (black/white background toggle)
+- Transparent PNG support (transparent areas become black)
+
+### Advanced Features
+- Multiple brightness mapping modes:
+  - Linear (default) - Standard linear mapping
+  - Logarithmic - Better for dark details and shadows
+  - Exponential - Emphasizes bright areas
+  - Sigmoid - Smooth transition between light and dark
+  - Power/Gamma - Traditional photo correction (adjustable gamma)
+  - Adaptive - Context-aware mapping based on local contrast
+
+### Processing Modes
+1. **Grayscale (Classic)**
+   - Black background with white circles (or inverted)
+   - Configurable brightness mapping
+   - Traditional dot pattern style
+   - Smoothing and contrast enhancement options
+
+2. **Color (Experimental)**
+   - Black background with colored circles (or inverted)
+   - Automatic color palette extraction
+   - Adjustable palette size (4-16 colors)
+   - Preserves image color themes
 
 ## Installation
 
@@ -107,24 +71,42 @@ python app.py
 Then open `http://localhost:8000` in your browser.
 
 ### Command Line
+Basic usage:
 ```bash
-python main.py --input image.jpg --output result.jpg
+python main.py --input image.jpg
+```
+
+Full options example:
+```bash
+python main.py --input image.jpg \
+               --output result.jpg \
+               --colors 5 \
+               --grid-size 16 \
+               --smooth \
+               --sigma 1.5 \
+               --contrast \
+               --invert \
+               --mode color \
+               --palette-size 8 \
+               --mapping logarithmic \
+               --gamma 2.2
 ```
 
 #### Command Line Options
 ```
---input          Input image path
---output         Output image path
---num-colors     Number of colors/divisions (default: 5)
---grid-size      Custom grid size (optional)
---smoothing      Enable smoothing
---sigma          Smoothing sigma value (default: 1.0)
---contrast       Enable contrast enhancement
---invert         Invert colors (white background)
---mode           Processing mode (grayscale/color)
---palette-size   Number of colors in palette (color mode only)
---mapping        Brightness mapping mode
---gamma          Gamma value for power mapping
+--input INPUT           Input image path
+--output OUTPUT         Output image path (optional, defaults to input_stixis.jpg)
+--colors COLORS         Number of grayscale colors (2-10, default: 5)
+--grid-size GRID_SIZE   Number of grid divisions (4+)
+--smooth               Enable smoothing
+--sigma SIGMA          Smoothing sigma value (default: 1.5)
+--contrast             Enable contrast enhancement
+--invert               Invert colors (white background)
+--mode {grayscale,color}  Processing mode (default: grayscale)
+--palette-size SIZE    Number of colors in palette (4-16, color mode only)
+--mapping MODE         Brightness mapping mode:
+                      {linear,logarithmic,exponential,sigmoid,power,adaptive}
+--gamma GAMMA          Gamma value for power mapping (default: 2.2)
 ```
 
 ## API Usage
@@ -133,6 +115,7 @@ The service can be accessed via HTTP API:
 
 ```bash
 curl -X POST http://localhost:8000/process \
+    -H "Accept: application/json" \
     -F "file=@image.jpg" \
     -F "num_colors=5" \
     -F "use_custom_grid=true" \
@@ -144,10 +127,28 @@ curl -X POST http://localhost:8000/process \
     -F "processor_mode=color" \
     -F "color_palette_size=8" \
     -F "brightness_mapping=linear" \
-    -H "Accept: application/json"
+    -F "gamma=2.2"
 ```
 
-## Examples
 
-[Include some example images showing different processing modes and settings]
 
+## Tips for Best Results
+
+1. **Use images with black background**
+
+2. **For Detailed Images:**
+   - Use higher color count (8-10)
+   - Smaller grid size (higher number)
+   - Enable smoothing
+   - Try logarithmic mapping for dark details
+
+3. **For High Contrast Images:**
+   - Use fewer colors (4-6)
+   - Enable contrast enhancement
+   - Try sigmoid mapping
+   - Adjust gamma if using power mapping
+
+4. **For Color Processing:**
+   - Start with 8 colors in palette
+   - Adjust based on image complexity
+   - Use smoothing for better color transitions

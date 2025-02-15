@@ -196,4 +196,4 @@ def download_file(filename):
         return jsonify({'error': f"Error downloading file: {str(e)}"}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8000)  # Change port to 8000 
+    app.run(host='0.0.0.0', port=8000, debug=True) 
