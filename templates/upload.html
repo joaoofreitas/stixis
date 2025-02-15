@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stixis - Artistic Circle Pattern Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .curl-command {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            position: relative;
+        }
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 5px 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .copy-button:hover {
+            background: #eee;
+        }
+        #result-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #result-image {
+            max-width: 100%;
+            margin-top: 10px;
+            display: none;
+        }
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+        #error-message {
+            color: red;
+            margin-top: 10px;
+            display: none;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Stixis</h1>
+        <p>Transform your images into stunning circle pattern artworks</p>
+    </div>
+    
+    <form id="process-form" action="/process" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="file">Select Image:</label>
+            <input type="file" id="file" name="file" accept=".jpg,.jpeg,.png" required>
+        </div>
+
+        <div class="form-group">
+            <label for="num_colors">Number of Colors (2-10):</label>
+            <input type="number" id="num_colors" name="num_colors" min="2" max="10" value="5">
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="use_custom_grid" name="use_custom_grid" value="true">
+                Use Custom Grid
+            </label>
+        </div>
+
+        <div class="form-group" id="grid_size_group" style="display: none;">
+            <label for="grid_size">Grid Divisions (4+):</label>
+            <input type="number" id="grid_size" name="grid_size" min="4" value="8">
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="use_smoothing" name="use_smoothing" value="true">
+                Apply Smoothing
+            </label>
+        </div>
+
+        <div class="form-group" id="smoothing_group" style="display: none;">
+            <label for="smoothing_sigma">Smoothing Strength (0.5-3.0):</label>
+            <input type="number" id="smoothing_sigma" name="smoothing_sigma" min="0.5" max="3.0" step="0.1" value="1.5">
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="enhance_contrast" name="enhance_contrast" value="true">
+                Enhance Contrast
+            </label>
+        </div>
+
+        <button type="submit">Process Image</button>
+    </form>
+
+    <div class="loading">
+        Processing image... Please wait...
+    </div>
+
+    <div id="error-message"></div>
+
+    <div id="result-container">
+        <img id="result-image" alt="Processed image">
+    </div>
+
+    <h2>API Usage</h2>
+    <p>You can also use the API directly with curl:</p>
+    <div class="curl-command">
+        <button class="copy-button" onclick="copyCommand()">Copy</button>
+        <code id="curl-command">
+            curl -X POST http://localhost:5000/process \
+            -F "file=@/path/to/your/image.jpg" \
+            -F "num_colors=5" \
+            -F "use_custom_grid=true" \
+            -F "grid_size=8" \
+            -F "use_smoothing=true" \
+            -F "smoothing_sigma=1.5" \
+            -F "enhance_contrast=true" \
+            -H "Accept: application/json"
+        </code>
+    </div>
+
+    <script>
+        // Function to toggle visibility of dependent fields
+        function toggleDependentFields() {
+            document.getElementById('grid_size_group').style.display = 
+                document.getElementById('use_custom_grid').checked ? 'block' : 'none';
+            
+            document.getElementById('smoothing_group').style.display = 
+                document.getElementById('use_smoothing').checked ? 'block' : 'none';
+        }
+
+        // Set default values and states on page load
+        window.addEventListener('load', function() {
+            // Set default checkbox states
+            const defaultValues = {
+                'use_custom_grid': false,
+                'use_smoothing': true,  // Default smoothing to on
+                'enhance_contrast': true,  // Default contrast to on
+                'num_colors': 5,
+                'grid_size': 8,
+                'smoothing_sigma': 1.5
+            };
+
+            // Apply default values
+            for (const [id, value] of Object.entries(defaultValues)) {
+                const element = document.getElementById(id);
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.checked = value;
+                    } else {
+                        element.value = value;
+                    }
+                }
+            }
+
+            // Show/hide dependent fields based on initial checkbox states
+            toggleDependentFields();
+            
+            // Update initial curl command
+            updateCurlCommand();
+        });
+
+        // Add event listeners for checkboxes
+        document.getElementById('use_custom_grid').addEventListener('change', function() {
+            toggleDependentFields();
+            updateCurlCommand();
+        });
+
+        document.getElementById('use_smoothing').addEventListener('change', function() {
+            toggleDependentFields();
+            updateCurlCommand();
+        });
+
+        // Copy curl command
+        function copyCommand() {
+            const command = document.getElementById('curl-command').innerText;
+            navigator.clipboard.writeText(command.replace(/\s+/g, ' ').trim())
+                .then(() => alert('Command copied to clipboard!'))
+                .catch(err => console.error('Failed to copy:', err));
+        }
+
+        // Handle form submission
+        document.getElementById('process-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const loading = document.querySelector('.loading');
+            const resultImage = document.getElementById('result-image');
+            const errorMessage = document.getElementById('error-message');
+            
+            // Show loading, hide previous results
+            loading.style.display = 'block';
+            resultImage.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            fetch('/process', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => Promise.reject(err));
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create URL for the image blob
+                const url = URL.createObjectURL(blob);
+                resultImage.src = url;
+                resultImage.style.display = 'block';
+            })
+            .catch(error => {
+                errorMessage.textContent = error.error || 'An error occurred while processing the image';
+                errorMessage.style.display = 'block';
+            })
+            .finally(() => {
+                loading.style.display = 'none';
+            });
+        });
+
+        // Update curl command based on form inputs
+        function updateCurlCommand() {
+            const form = document.getElementById('process-form');
+            const formData = new FormData(form);
+            let command = 'curl -X POST http://localhost:5000/process \\';
+            
+            for (let [key, value] of formData.entries()) {
+                if (key === 'file') {
+                    command += `\n-F "file=@${value.name || 'your_image.jpg'}" \\`;
+                } else {
+                    command += `\n-F "${key}=${value}" \\`;
+                }
+            }
+            command += '\n-H "Accept: application/json"';
+            
+            document.getElementById('curl-command').textContent = command;
+        }
+
+        // Add event listeners to all form inputs to update curl command
+        document.querySelectorAll('#process-form input').forEach(input => {
+            input.addEventListener('change', updateCurlCommand);
+        });
+    </script>
+</body>
+</html> 
