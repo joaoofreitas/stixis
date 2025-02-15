@@ -2,11 +2,22 @@ from PIL import Image, ImageDraw, ImageOps
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from skimage import exposure
+from scipy.special import expit  # for sigmoid function
 
 class StixisProcessor:
+    BRIGHTNESS_MAPPINGS = {
+        'linear': lambda x: x,
+        'logarithmic': lambda x: np.log1p(x) / np.log1p(1),
+        'exponential': lambda x: np.exp(x - 1),
+        'sigmoid': lambda x: expit(6 * x - 3),  # scaled sigmoid
+        'power': lambda x, gamma=2.2: x ** (1/gamma),  # gamma correction
+        'adaptive': None  # will be handled separately
+    }
+
     def __init__(self, num_colors, grid_size=None, smoothing=False, 
                  smoothing_sigma=1.0, darkness_threshold=0.1,
-                 enhance_contrast=False, contrast_percentile=(2, 98), invert=False):
+                 enhance_contrast=False, contrast_percentile=(2, 98), 
+                 invert=False, brightness_mapping='linear', gamma=2.2):
         """Initialize the Stixis processor with the given parameters."""
         print(f"StixisProcessor.__init__ called with invert={invert}")  # Debug log
         self.num_colors = num_colors
@@ -19,6 +30,8 @@ class StixisProcessor:
         self.contrast_percentile = contrast_percentile
         self.output_path = None
         self.invert = invert
+        self.brightness_mapping = brightness_mapping
+        self.gamma = gamma
         print(f"StixisProcessor initialized with self.invert={self.invert}")  # Debug log
 
     def process(self, image):
@@ -109,12 +122,36 @@ class StixisProcessor:
         x_end = min(self.width, x + 2 * self.grid_size)
         return pixels[y_start:y_end, x_start:x_end]
 
+    def _map_brightness(self, brightness):
+        """Apply brightness mapping function."""
+        if self.brightness_mapping == 'adaptive':
+            # Adaptive mapping based on image statistics
+            return self._adaptive_mapping(brightness)
+        elif self.brightness_mapping == 'power':
+            return self.BRIGHTNESS_MAPPINGS['power'](brightness, self.gamma)
+        else:
+            mapping_func = self.BRIGHTNESS_MAPPINGS.get(self.brightness_mapping, 
+                                                      self.BRIGHTNESS_MAPPINGS['linear'])
+            return mapping_func(brightness)
+
+    def _adaptive_mapping(self, brightness):
+        """Adaptive mapping based on local contrast."""
+        # Calculate local contrast
+        local_std = np.std(brightness)
+        if local_std < 0.1:  # Low contrast region
+            return self.BRIGHTNESS_MAPPINGS['logarithmic'](brightness)
+        elif local_std > 0.3:  # High contrast region
+            return self.BRIGHTNESS_MAPPINGS['sigmoid'](brightness)
+        else:  # Medium contrast region
+            return self.BRIGHTNESS_MAPPINGS['power'](brightness, self.gamma)
+
     def _should_draw_circle(self, cell, neighborhood):
         """Determine if a circle should be drawn based on cell brightness and neighborhood."""
         avg_brightness = np.mean(cell) / 255.0
         
         if not self.smoothing:
-            return avg_brightness > self.darkness_threshold, avg_brightness
+            mapped_brightness = self._map_brightness(avg_brightness)
+            return mapped_brightness > self.darkness_threshold, mapped_brightness
         
         neighborhood_brightness = np.mean(neighborhood) / 255.0
         neighborhood_std = np.std(neighborhood) / 255.0
@@ -131,7 +168,8 @@ class StixisProcessor:
         if 0.2 < effective_brightness < 0.8:
             effective_brightness = (effective_brightness + neighborhood_brightness) / 2
         
-        return effective_brightness > self.darkness_threshold, effective_brightness
+        mapped_brightness = self._map_brightness(effective_brightness)
+        return mapped_brightness > self.darkness_threshold, mapped_brightness
 
     # ... rest of the processing methods remain the same, 
     # but remove save_image and load_image methods ... 

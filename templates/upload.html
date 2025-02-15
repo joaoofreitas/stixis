@@ -359,6 +359,63 @@
         .progress-step.done::before {
             content: "✓";
         }
+
+        .advanced-settings {
+            border-top: 1px solid var(--border-color);
+            margin-top: 1rem;
+            padding-top: 1rem;
+        }
+
+        .advanced-settings h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--text-color);
+        }
+
+        .advanced-settings label {
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .advanced-settings select {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .secondary-button {
+            width: 100%;
+            background: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .secondary-button:hover {
+            background: var(--hover-color);
+            color: var(--bg-color);
+        }
+
+        #gamma_control {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        #gamma_value {
+            display: inline-block;
+            min-width: 2.5em;
+            text-align: right;
+            margin-left: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -428,6 +485,35 @@
                 <input type="checkbox" id="invert" name="invert" value="true">
                 Invert colors (white background, black circles)
             </label>
+        </div>
+
+        <div class="form-group">
+            <button type="button" id="toggle_advanced" class="secondary-button">
+                Show Advanced Settings
+            </button>
+        </div>
+
+        <div class="form-group advanced-settings" style="display: none;">
+            <h3>Advanced Settings</h3>
+            
+            <label>Brightness Mapping:
+                <select id="brightness_mapping" name="brightness_mapping">
+                    <option value="linear">Linear (Default)</option>
+                    <option value="logarithmic">Logarithmic (Better for dark details)</option>
+                    <option value="exponential">Exponential (Emphasizes bright areas)</option>
+                    <option value="sigmoid">Sigmoid (Smooth transition)</option>
+                    <option value="power">Power/Gamma (Traditional photo correction)</option>
+                    <option value="adaptive">Adaptive (Context-aware)</option>
+                </select>
+            </label>
+            
+            <div id="gamma_control" style="display: none;">
+                <label>Gamma Value:
+                    <input type="range" id="gamma" name="gamma" 
+                           min="1.0" max="3.0" step="0.1" value="2.2">
+                    <span id="gamma_value">2.2</span>
+                </label>
+            </div>
         </div>
 
         <button type="submit">Process Image</button>
@@ -685,6 +771,24 @@
         function updateGridValue(value) {
             document.getElementById('grid_size_value').textContent = value;
         }
+
+        document.getElementById('toggle_advanced').addEventListener('click', function() {
+            const advancedSettings = document.querySelector('.advanced-settings');
+            const isHidden = advancedSettings.style.display === 'none';
+            advancedSettings.style.display = isHidden ? 'block' : 'none';
+            this.textContent = isHidden ? 'Hide Advanced Settings' : 'Show Advanced Settings';
+        });
+
+        document.getElementById('brightness_mapping').addEventListener('change', function() {
+            const gammaControl = document.getElementById('gamma_control');
+            gammaControl.style.display = this.value === 'power' ? 'block' : 'none';
+            updateCurlCommand();
+        });
+
+        document.getElementById('gamma').addEventListener('input', function() {
+            document.getElementById('gamma_value').textContent = this.value;
+            updateCurlCommand();
+        });
     </script>
 </body>
 </html> 

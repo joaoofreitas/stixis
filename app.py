@@ -77,6 +77,9 @@ def process_image():
         smoothing_sigma = float(request.form.get('smoothing_sigma', 1.5))
         enhance_contrast = request.form.get('enhance_contrast') == 'true'
         
+        brightness_mapping = request.form.get('brightness_mapping', 'linear')
+        gamma = float(request.form.get('gamma', 2.2))
+        
         print(f"Creating processor with parameters:")
         print(f"- num_colors: {num_colors}")
         print(f"- grid_size: {grid_size}")
@@ -84,6 +87,8 @@ def process_image():
         print(f"- smoothing_sigma: {smoothing_sigma}")
         print(f"- enhance_contrast: {enhance_contrast}")
         print(f"- invert: {invert}")
+        print(f"- brightness_mapping: {brightness_mapping}")
+        print(f"- gamma: {gamma}")
         
         # Initialize processor with parameters
         processor = StixisProcessor(
@@ -92,7 +97,9 @@ def process_image():
             smoothing=use_smoothing,
             smoothing_sigma=smoothing_sigma,
             enhance_contrast=enhance_contrast,
-            invert=invert
+            invert=invert,
+            brightness_mapping=brightness_mapping,
+            gamma=gamma
         )
         
         print(f"Processor created with invert={processor.invert}")
