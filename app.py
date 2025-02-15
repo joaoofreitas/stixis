@@ -65,41 +65,40 @@ def process_image():
         print(f"Saving file to: {save_path}")
         file.save(save_path)
 
-        # Get parameters from form/request
-        try:
-            print("Processing form parameters")
-            num_colors = int(request.form.get('num_colors', 5))
-            if not 2 <= num_colors <= 10:
-                return jsonify({'error': "Number of colors must be between 2 and 10"}), 400
-
-            use_custom_grid = request.form.get('use_custom_grid') == 'true'
-            grid_size = None
-            if use_custom_grid:
-                grid_size = int(request.form.get('grid_size', 0))
-                if grid_size < 4:
-                    return jsonify({'error': "Grid size must be at least 4"}), 400
-
-            use_smoothing = request.form.get('use_smoothing') == 'true'
-            smoothing_sigma = float(request.form.get('smoothing_sigma', 1.5))
-            if use_smoothing and not 0.5 <= smoothing_sigma <= 3.0:
-                return jsonify({'error': "Smoothing sigma must be between 0.5 and 3.0"}), 400
-
-            enhance_contrast = request.form.get('enhance_contrast') == 'true'
-            
-        except ValueError as e:
-            return jsonify({'error': f"Invalid parameter values: {str(e)}"}), 400
-
+        # Get parameters from form
+        invert = request.form.get('invert') == 'true'
+        print(f"Invert parameter received: {request.form.get('invert')}")
+        print(f"Invert parameter parsed: {invert}")
+        
+        num_colors = int(request.form.get('num_colors', 5))
+        use_custom_grid = request.form.get('use_custom_grid') == 'true'
+        grid_size = int(request.form.get('grid_size', 0)) if use_custom_grid else None
+        use_smoothing = request.form.get('use_smoothing') == 'true'
+        smoothing_sigma = float(request.form.get('smoothing_sigma', 1.5))
+        enhance_contrast = request.form.get('enhance_contrast') == 'true'
+        
+        print(f"Creating processor with parameters:")
+        print(f"- num_colors: {num_colors}")
+        print(f"- grid_size: {grid_size}")
+        print(f"- smoothing: {use_smoothing}")
+        print(f"- smoothing_sigma: {smoothing_sigma}")
+        print(f"- enhance_contrast: {enhance_contrast}")
+        print(f"- invert: {invert}")
+        
+        # Initialize processor with parameters
+        processor = StixisProcessor(
+            num_colors=num_colors,
+            grid_size=grid_size,
+            smoothing=use_smoothing,
+            smoothing_sigma=smoothing_sigma,
+            enhance_contrast=enhance_contrast,
+            invert=invert
+        )
+        
+        print(f"Processor created with invert={processor.invert}")
+        
         # Process image
         try:
-            print("Initializing processor")
-            processor = StixisProcessor(
-                num_colors=num_colors,
-                grid_size=grid_size,
-                smoothing=use_smoothing,
-                smoothing_sigma=smoothing_sigma,
-                enhance_contrast=enhance_contrast
-            )
-            
             print("Loading and processing image")
             input_image = Image.open(save_path)
             output_image = processor.process(input_image)

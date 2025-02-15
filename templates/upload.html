@@ -423,6 +423,13 @@
             </label>
         </div>
 
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="invert" name="invert" value="true">
+                Invert colors (white background, black circles)
+            </label>
+        </div>
+
         <button type="submit">Process Image</button>
     </form>
 
@@ -474,8 +481,9 @@
             // Set default checkbox states
             const defaultValues = {
                 'use_custom_grid': false,
-                'use_smoothing': true,  // Default smoothing to on
-                'enhance_contrast': true,  // Default contrast to on
+                'use_smoothing': true,
+                'enhance_contrast': true,
+                'invert': false,
                 'num_colors': 5,
                 'grid_size': 16,
                 'smoothing_sigma': 1.5
@@ -511,11 +519,16 @@
             updateCurlCommand();
         });
 
+        // Add event listener for invert checkbox
+        document.getElementById('invert').addEventListener('change', function() {
+            updateCurlCommand();
+        });
+
         // Function to update the curl command display
         function updateCurlCommand() {
             const form = document.getElementById('process-form');
             const formData = new FormData(form);
-            const currentUrl = window.location.origin;  // Gets protocol, domain and port
+            const currentUrl = window.location.origin;
             
             const commandParts = [
                 `curl -X POST ${currentUrl}/process \\`,
@@ -525,6 +538,8 @@
             for (let [key, value] of formData.entries()) {
                 if (key === 'file') {
                     commandParts.push(`    -F "file=@${value.name || 'your_image.jpg'}" \\`);
+                } else if (key === 'invert') {
+                    commandParts.push(`    -F "invert=${value === 'on' ? 'true' : 'false'}" \\`);
                 } else {
                     commandParts.push(`    -F "${key}=${value}" \\`);
                 }
@@ -580,9 +595,29 @@
         // Update form submission to handle progress steps
         document.getElementById('process-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log('Form submitted'); // Debug log
+            console.log('Form submitted');
             
             const formData = new FormData(this);
+            
+            // Explicitly handle checkbox values
+            const invertChecked = document.getElementById('invert').checked;
+            console.log('Invert checkbox state:', invertChecked);  // Debug log
+            
+            // Remove any existing 'invert' value and set the new one
+            formData.delete('invert');
+            formData.append('invert', invertChecked ? 'true' : 'false');
+            
+            console.log('FormData invert value:', formData.get('invert'));  // Debug log
+            
+            // Same for other checkboxes
+            formData.delete('use_custom_grid');
+            formData.delete('use_smoothing');
+            formData.delete('enhance_contrast');
+            
+            formData.append('use_custom_grid', document.getElementById('use_custom_grid').checked ? 'true' : 'false');
+            formData.append('use_smoothing', document.getElementById('use_smoothing').checked ? 'true' : 'false');
+            formData.append('enhance_contrast', document.getElementById('enhance_contrast').checked ? 'true' : 'false');
+            
             const loadingState = document.querySelector('.loading-state');
             const resultContainer = document.getElementById('result-container');
             const errorMessage = document.getElementById('error-message');

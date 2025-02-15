@@ -8,7 +8,10 @@ import argparse
 def main():
     try:
         # Parse command line arguments
-        args = parse_args()
+        parser = argparse.ArgumentParser(description='Process images with circle pattern effect')
+        parser.add_argument('--invert', action='store_true',
+                           help='Invert colors (white background, black circles)')
+        args = parser.parse_args()
         
         # If no arguments provided, use interactive mode
         if args is None:
@@ -26,7 +29,8 @@ def main():
                 smooth=params["params"]["smoothing"],
                 contrast=params["params"]["enhance_contrast"],
                 output_dir=params["output_dir"],
-                grid_search=False
+                grid_search=False,
+                invert=params["params"]["invert"]
             )
         
         # Handle grid search mode
@@ -40,7 +44,9 @@ def main():
             num_colors=args.colors,
             grid_size=args.grid_size,
             smoothing=args.smooth,
-            enhance_contrast=args.contrast
+            smoothing_sigma=args.smoothing_sigma,
+            enhance_contrast=args.contrast,
+            invert=args.invert
         )
         
         # Process image

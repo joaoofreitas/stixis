@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from skimage import exposure
@@ -6,8 +6,9 @@ from skimage import exposure
 class StixisProcessor:
     def __init__(self, num_colors, grid_size=None, smoothing=False, 
                  smoothing_sigma=1.0, darkness_threshold=0.1,
-                 enhance_contrast=False, contrast_percentile=(2, 98)):
+                 enhance_contrast=False, contrast_percentile=(2, 98), invert=False):
         """Initialize the Stixis processor with the given parameters."""
+        print(f"StixisProcessor.__init__ called with invert={invert}")  # Debug log
         self.num_colors = num_colors
         self.grid_size = grid_size
         self.actual_divisions = grid_size if grid_size else num_colors
@@ -17,12 +18,21 @@ class StixisProcessor:
         self.enhance_contrast = enhance_contrast
         self.contrast_percentile = contrast_percentile
         self.output_path = None
+        self.invert = invert
+        print(f"StixisProcessor initialized with self.invert={self.invert}")  # Debug log
 
     def process(self, image):
         """Process the image and create circle filter effect."""
         self.width, self.height = image.size
         
-        # Convert to numpy array
+        # Handle transparency by converting transparent pixels to black
+        if image.mode == 'RGBA':
+            # Create a black background
+            background = Image.new('RGB', image.size, (0, 0, 0))
+            # Alpha composite the image over the black background
+            image = Image.alpha_composite(background.convert('RGBA'), image)
+        
+        # Convert to grayscale
         pixels = np.array(image.convert('L'))
         
         # Apply preprocessing
@@ -66,6 +76,11 @@ class StixisProcessor:
                                 center_x + circle_size//2, 
                                 center_y + circle_size//2
                             ], fill=255)
+        
+        # Invert the final image if requested
+        if self.invert:
+            print("Inverting final image")  # Debug log
+            output = ImageOps.invert(output)
         
         return output
 
