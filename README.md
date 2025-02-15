@@ -1,160 +1,98 @@
-# stixis
+# Stixis - Circle Pattern Generator
 
-A versatile image processing tool that transforms photographs into stunning circular pattern artworks. Stixis offers multiple interfaces including web, command-line, and API access for seamless integration into your workflow.
+Stixis is a Python-based image processing tool that transforms images into artistic circle patterns. It offers both a web interface and command-line functionality.
 
-## Purpose
+## Features
 
-Stixis transforms regular images into artistic representations using circles of varying sizes based on the image's grayscale values. It divides the image into a grid and replaces each cell with appropriately sized circles, creating an interesting visual effect that maintains the essence of the original image while presenting it in a unique artistic style.
+### Basic Controls
+- Adjustable number of colors/divisions
+- Custom grid size option
+- Smoothing with adjustable sigma
+- Contrast enhancement
+- Color inversion (black/white background toggle)
 
-Key features:
-- Customizable number of grayscale colors (2-10)
-- Adjustable grid divisions
-- Optional image smoothing
-- Contrast enhancement capabilities
-- Multiple interface options for different use cases
+### Advanced Features
+- Multiple brightness mapping modes:
+  - Linear (default)
+  - Logarithmic (better for dark details)
+  - Exponential (emphasizes bright areas)
+  - Sigmoid (smooth transition)
+  - Power/Gamma (traditional photo correction)
+  - Adaptive (context-aware)
+- Color processing mode:
+  - Extracts dominant colors from the image
+  - Adjustable color palette size (4-16 colors)
+  - Maintains image color scheme in circle patterns
+
+### Processing Modes
+1. **Grayscale (Classic)**
+   - Black and white circle patterns
+   - Configurable brightness mapping
+   - Traditional dot pattern style
+
+2. **Color (Experimental)**
+   - Color-aware circle patterns
+   - Automatic color palette extraction
+   - Preserves image color themes
 
 ## Installation
 
-1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/yourusername/stixis.git
 cd stixis
-```
-
-2. Create and activate a virtual environment (recommended):
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
 pip install -r requirements.txt
 ```
 
-## Usage Options
+## Usage
 
-### 1. Command Line Interface (CLI)
-
-The CLI supports both parameter-based and interactive modes.
-
-#### Parameter Mode:
-```bash
-python main.py <image_path> [options]
-```
-
-Options:
-- `--colors N`: Number of grayscale colors (2-10, default: 5)
-- `--grid-size N`: Number of grid divisions (4+)
-- `--smooth`: Enable smoothing
-- `--contrast`: Enable contrast enhancement
-- `--output-dir PATH`: Custom output directory
-
-Examples:
-```bash
-# Basic usage with default parameters
-python main.py image.jpg
-
-# Full parameter specification
-python main.py image.jpg --colors 8 --grid-size 32 --smooth --contrast
-
-# Custom output directory
-python main.py image.jpg --output-dir ./processed
-```
-
-#### Interactive Mode:
-If no parameters are provided (except the image path), the CLI will prompt for options:
-```bash
-python main.py
-> Enter path to image file: image.jpg
-> Enter number of colors (2-10): 5
-> Use custom grid? (y/n): y
-> Enter grid divisions: 16
-> Apply smoothing? (y/n): y
-> Smoothing strength (0.5-3.0): 1.5
-> Enhance contrast? (y/n): y
-```
-
-### 2. Web Interface
-
-1. Start the Flask server:
+### Web Interface
 ```bash
 python app.py
 ```
+Then open `http://localhost:8000` in your browser.
 
-2. Access the interface at: `http://localhost:5000`
+### Command Line
+```bash
+python main.py --input image.jpg --output result.jpg
+```
 
-Features:
-- Interactive form for parameter selection
-- Real-time image preview
-- Automatic curl command generation
-- Direct file download
+#### Command Line Options
+```
+--input          Input image path
+--output         Output image path
+--num-colors     Number of colors/divisions (default: 5)
+--grid-size      Custom grid size (optional)
+--smoothing      Enable smoothing
+--sigma          Smoothing sigma value (default: 1.0)
+--contrast       Enable contrast enhancement
+--invert         Invert colors (white background)
+--mode           Processing mode (grayscale/color)
+--palette-size   Number of colors in palette (color mode only)
+--mapping        Brightness mapping mode
+--gamma          Gamma value for power mapping
+```
 
-### 3. API (curl)
+## API Usage
 
-Process images programmatically using curl:
+The service can be accessed via HTTP API:
 
 ```bash
-curl -X POST http://localhost:5000/process \
-  -F "file=@/path/to/your/image.jpg" \
-  -F "num_colors=5" \
-  -F "use_custom_grid=true" \
-  -F "grid_size=16" \
-  -F "use_smoothing=true" \
-  -F "smoothing_sigma=1.5" \
-  -F "enhance_contrast=true" \
-  -H "Accept: application/json"
+curl -X POST http://localhost:8000/process \
+    -F "file=@image.jpg" \
+    -F "num_colors=5" \
+    -F "use_custom_grid=true" \
+    -F "grid_size=16" \
+    -F "use_smoothing=true" \
+    -F "smoothing_sigma=1.5" \
+    -F "enhance_contrast=true" \
+    -F "invert=false" \
+    -F "processor_mode=color" \
+    -F "color_palette_size=8" \
+    -F "brightness_mapping=linear" \
+    -H "Accept: application/json"
 ```
 
-## Parameters
+## Examples
 
-| Parameter | Type | Description | Range | Default |
-|-----------|------|-------------|--------|---------|
-| colors/num_colors | int | Number of grayscale colors | 2-10 | 5 |
-| grid-size | int | Number of divisions | 4+ | auto |
-| smooth/use_smoothing | bool | Enable smoothing | true/false | true |
-| smoothing_sigma | float | Smoothing strength | 0.5-3.0 | 1.5 |
-| contrast/enhance_contrast | bool | Enable contrast | true/false | true |
+[Include some example images showing different processing modes and settings]
 
-## Output
-
-Processed images are saved with descriptive filenames:
-```
-originalname_GS<colors>_DIV<divisions>_smooth_contrast.jpg
-```
-
-Components:
-- `GS<colors>`: Number of grayscale colors used
-- `DIV<divisions>`: Number of grid divisions
-- `_smooth`: Added if smoothing was applied
-- `_contrast`: Added if contrast enhancement was used
-
-## Project Structure
-
-```
-stixis/
-├── main.py           # CLI interface
-├── app.py           # Flask web server
-├── stixis_processor.py  # Core processing class
-├── cli_utils.py     # CLI utilities
-├── image_handler.py # Image processing utilities
-├── requirements.txt # Dependencies
-├── templates/       # Web templates
-└── uploads/        # Processed images
-```
-
-## Requirements
-
-- Python 3.6+
-- Dependencies (installed via requirements.txt):
-    imageio==2.37.0
-    lazy_loader==0.4
-    networkx==3.4.2
-    numpy==2.2.3
-    packaging==24.2
-    pillow==11.1.0
-    scikit-image==0.25.1
-    scipy==1.15.1
-    tifffile==2025.1.10
-    flask==2.0.1
-    werkzeug==2.0.1
