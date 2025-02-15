@@ -2,114 +2,362 @@
 <html>
 <head>
     <title>Stixis - Artistic Circle Pattern Generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        :root {
+            /* Light theme */
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --accent-color: #1a1a1a;
+            --surface-color: #f5f5f5;
+            --border-color: #e0e0e0;
+            --hover-color: #2d2d2d;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #1a1a1a;
+                --text-color: #ffffff;
+                --accent-color: #ffffff;
+                --surface-color: #2d2d2d;
+                --border-color: #404040;
+                --hover-color: #666666;
+            }
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, monospace;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
         }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .curl-command {
-            background: #f4f4f4;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-            position: relative;
-            white-space: pre;  /* Preserve line breaks */
-            font-family: monospace;
-        }
-        .copy-button {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            padding: 5px 10px;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        .copy-button:hover {
-            background: #eee;
-        }
-        #result-container {
-            margin-top: 20px;
-            text-align: center;
-        }
-        #result-image {
-            max-width: 100%;
-            margin-top: 10px;
-            display: none;
-        }
-        .loading {
-            display: none;
-            margin: 20px 0;
-        }
-        #error-message {
-            color: red;
-            margin-top: 10px;
-            display: none;
-        }
+
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 2rem;
+            padding: 1rem;
         }
+
         .header h1 {
-            color: #333;
-            margin-bottom: 10px;
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+            font-weight: 900;
         }
+
         .header p {
-            color: #666;
-            font-size: 1.1em;
+            color: var(--text-color);
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin: 0;
         }
-        code {
-            white-space: pre;  /* Preserve line breaks */
-        }
-        .api-section {
-            margin-top: 2rem;
-        }
-        
-        .curl-command {
-            background: #2d2d2d;
-            color: #f8f8f2;
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            background: var(--surface-color);
             padding: 1.5rem;
-            border-radius: 5px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        input[type="file"],
+        input[type="number"],
+        input[type="range"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-top: 0.25rem;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+
+        button[type="submit"] {
+            background: var(--text-color);
+            color: var(--bg-color);
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 300px;
+            margin: 2rem auto;
+            display: block;
+            transition: all 0.2s;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button[type="submit"]:hover {
+            background: var(--hover-color);
+            transform: translateY(-1px);
+        }
+
+        button[type="submit"]:active {
+            transform: translateY(0);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 1rem;
+            color: var(--text-color);
+            display: none;
+            background: var(--surface-color);
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-weight: 500;
+        }
+
+        #error-message {
+            color: #ff6b6b;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            background: rgba(255,107,107,0.1);
+            display: none;
+        }
+
+        #result-container {
+            margin-top: 2rem;
+            text-align: center;
+            display: none;
+        }
+
+        #result-image {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .api-section {
+            margin-top: 3rem;
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .api-section h2 {
+            color: var(--text-color);
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .curl-command {
+            background: var(--text-color);
+            color: var(--bg-color);
+            border-radius: 6px;
             position: relative;
             margin: 1rem 0;
+            overflow: hidden;
         }
-        
+
         .curl-command pre {
             margin: 0;
-            white-space: pre;
+            padding: 1rem;
             overflow-x: auto;
             font-family: 'Monaco', 'Consolas', monospace;
             font-size: 0.9rem;
-            line-height: 1.5;
+            line-height: 1.4;
         }
-        
-        .curl-command code {
-            display: block;
-            padding-right: 2rem;
-        }
-        
+
         .copy-button {
             position: absolute;
             top: 0.5rem;
             right: 0.5rem;
             padding: 0.5rem 1rem;
-            background: #444;
-            color: #fff;
+            background: rgba(255,255,255,0.1);
+            color: var(--bg-color);
             border: none;
             border-radius: 3px;
             cursor: pointer;
             font-size: 0.8rem;
             transition: background 0.2s;
         }
-        
+
         .copy-button:hover {
-            background: #666;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .form-text {
+            font-size: 0.85rem;
+            color: var(--text-color);
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--text-color);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {transform: rotate(360deg);}
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .form-group {
+                padding: 0.75rem;
+            }
+
+            .curl-command pre {
+                font-size: 0.8rem;
+                padding: 0.75rem;
+            }
+
+            .copy-button {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.7rem;
+            }
+        }
+
+        /* Better file upload styling */
+        .file-upload {
+            position: relative;
+            width: calc(100% - 40px);
+            min-height: 120px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 20px;
+            margin: 0 auto;
+            transition: border-color 0.3s;
+            cursor: pointer;
+        }
+
+        .file-upload:hover {
+            border-color: var(--text-color);
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+        }
+
+        .file-upload-text {
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .file-upload-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            pointer-events: none;
+        }
+
+        .file-name {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
+        /* Image preview */
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+
+        /* Loading states */
+        .loading-state {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+            background: var(--surface-color);
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .loading-message {
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        /* Progress messages */
+        .progress-steps {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0;
+            text-align: left;
+        }
+
+        .progress-step {
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            display: flex;
+            align-items: center;
+            opacity: 0.5;
+        }
+
+        .progress-step.active {
+            opacity: 1;
+        }
+
+        .progress-step.done {
+            opacity: 0.7;
+        }
+
+        .progress-step::before {
+            content: "○";
+            margin-right: 0.5rem;
+        }
+
+        .progress-step.active::before {
+            content: "●";
+        }
+
+        .progress-step.done::before {
+            content: "✓";
         }
     </style>
 </head>
@@ -121,8 +369,16 @@
     
     <form id="process-form" action="/process" method="post" enctype="multipart/form-data">
         <div class="form-group">
-            <label for="file">Select Image:</label>
-            <input type="file" id="file" name="file" accept=".jpg,.jpeg,.png" required>
+            <label for="file">Image Upload</label>
+            <div class="file-upload">
+                <div class="file-upload-text">
+                    <div class="file-upload-icon">📁</div>
+                    <div>Drag and drop your image here<br>or click to browse</div>
+                    <div class="file-name"></div>
+                </div>
+                <input type="file" id="file" name="file" accept=".jpg,.jpeg,.png" required>
+                <img class="image-preview" alt="Preview">
+            </div>
         </div>
 
         <div class="form-group">
@@ -170,8 +426,14 @@
         <button type="submit">Process Image</button>
     </form>
 
-    <div class="loading">
-        Processing image... Please wait...
+    <div class="loading-state">
+        <div class="spinner"></div>
+        <ul class="progress-steps">
+            <li class="progress-step" data-step="upload">Uploading image...</li>
+            <li class="progress-step" data-step="process">Processing image...</li>
+            <li class="progress-step" data-step="generate">Generating pattern...</li>
+            <li class="progress-step" data-step="complete">Completing...</li>
+        </ul>
     </div>
 
     <div id="error-message"></div>
@@ -253,14 +515,11 @@
         function updateCurlCommand() {
             const form = document.getElementById('process-form');
             const formData = new FormData(form);
-            
-            // Build command parts
             const commandParts = [
                 'curl -X POST http://localhost:8000/process \\',
                 '    -H "Accept: application/json" \\'
             ];
             
-            // Add form fields
             for (let [key, value] of formData.entries()) {
                 if (key === 'file') {
                     commandParts.push(`    -F "file=@${value.name || 'your_image.jpg'}" \\`);
@@ -269,10 +528,8 @@
                 }
             }
             
-            // Remove trailing backslash from last line
-            commandParts[command.length - 1] = commandParts[command.length - 1].slice(0, -2);
+            commandParts[commandParts.length - 1] = commandParts[commandParts.length - 1].slice(0, -2);
             
-            // Update display
             document.getElementById('curl-command').textContent = commandParts.join('\n');
         }
         
@@ -301,42 +558,85 @@
                 .catch(err => console.error('Failed to copy:', err));
         }
 
-        // Handle form submission
+        // File upload preview
+        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const fileName = document.querySelector('.file-name');
+                const preview = document.querySelector('.image-preview');
+                
+                fileName.textContent = file.name;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Update form submission to handle progress steps
         document.getElementById('process-form').addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Form submitted'); // Debug log
             
             const formData = new FormData(this);
-            const loading = document.querySelector('.loading');
-            const resultImage = document.getElementById('result-image');
+            const loadingState = document.querySelector('.loading-state');
+            const resultContainer = document.getElementById('result-container');
             const errorMessage = document.getElementById('error-message');
+            const steps = document.querySelectorAll('.progress-step');
             
-            // Show loading, hide previous results
-            loading.style.display = 'block';
-            resultImage.style.display = 'none';
+            // Reset and show loading state
+            loadingState.style.display = 'block';
+            resultContainer.style.display = 'none';
             errorMessage.style.display = 'none';
+            
+            // Update progress steps
+            function updateProgress(step) {
+                steps.forEach(s => {
+                    s.classList.remove('active');
+                    if (s.dataset.step === step) {
+                        s.classList.add('active');
+                    } else if (Array.from(steps).indexOf(s) < Array.from(steps).findIndex(x => x.dataset.step === step)) {
+                        s.classList.add('done');
+                    }
+                });
+            }
+            
+            // Start with upload
+            updateProgress('upload');
             
             fetch('/process', {
                 method: 'POST',
                 body: formData
             })
             .then(response => {
+                console.log('Response received:', response.status); // Debug log
+                updateProgress('process');
                 if (!response.ok) {
                     return response.json().then(err => Promise.reject(err));
                 }
+                updateProgress('generate');
                 return response.blob();
             })
             .then(blob => {
-                // Create URL for the image blob
+                console.log('Processing complete'); // Debug log
+                updateProgress('complete');
                 const url = URL.createObjectURL(blob);
+                const resultImage = document.getElementById('result-image');
                 resultImage.src = url;
-                resultImage.style.display = 'block';
+                resultContainer.style.display = 'block';
             })
             .catch(error => {
+                console.error('Error:', error); // Debug log
                 errorMessage.textContent = error.error || 'An error occurred while processing the image';
                 errorMessage.style.display = 'block';
             })
             .finally(() => {
-                loading.style.display = 'none';
+                setTimeout(() => {
+                    loadingState.style.display = 'none';
+                }, 1000);
             });
         });
 
