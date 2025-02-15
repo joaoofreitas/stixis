@@ -35,6 +35,61 @@ Stixis is a Python-based image processing tool that transforms images into artis
    - Automatic color palette extraction
    - Preserves image color themes
 
+## Artistic Showcase
+
+### The Starry Night Transformation
+<div align="center">
+  <table>
+    <tr>
+      <td><img src="docs/images/SkeletonSmokingVanGogh.JPG" alt="Skeleton Smoking Cigarette - Original" width="400"/></td>
+      <td><img src="docs/images/SkeletonSmoking.jpg" alt="Skeleton Smoking Cigarette - Stixis" width="400"/></td>
+    </tr>
+    <tr>
+      <td><i>Original: Skeleton Smoking Cigarette - Vincent van Gogh</i></td>
+      <td><i>Stixis Interpretation</i></td>
+    </tr>
+  </table>
+</div>
+
+#### Parameters Used
+```python
+processor = StixisProcessor(
+    num_colors=10,          # Higher color count for detailed night sky
+    grid_size=75,           # Fine grid for intricate swirls
+    smoothing=True,         # Smooth transitions between circles
+    smoothing_sigma=1.5,    # Moderate smoothing for painterly effect
+    enhance_contrast=True,  # Emphasize the dramatic sky
+    invert=False,          # Preserve original light/dark relationship
+    brightness_mapping='logarithmic',  # Capture details in darker areas
+    gamma=2.2              # Standard gamma for natural appearance
+)
+```
+
+Try these settings with the CLI:
+```bash
+python main.py --input starry_night.jpg \
+               --num-colors 10 \
+               --grid-size 75 \
+               --smoothing \
+               --sigma 1.5 \
+               --contrast \
+               --mapping logarithmic \
+               --gamma 2.2
+```
+
+Or via the API:
+```bash
+curl -X POST http://localhost:8000/process \
+    -F "file=@starry_night.jpg" \
+    -F "num_colors=10" \
+    -F "grid_size=75" \
+    -F "use_smoothing=true" \
+    -F "smoothing_sigma=1.5" \
+    -F "enhance_contrast=true" \
+    -F "brightness_mapping=logarithmic" \
+    -F "gamma=2.2"
+```
+
 ## Installation
 
 ```bash
