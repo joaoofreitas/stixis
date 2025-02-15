@@ -37,7 +37,7 @@ Stixis is a Python-based image processing tool that transforms images into artis
 
 ## Artistic Showcase
 
-### The Starry Night Transformation
+### The Skeleton Smoking Cigarette Transformation
 <div align="center">
   <table>
     <tr>
