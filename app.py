@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from stixis_processor import StixisProcessor
+from stixis_color_processor import StixisColorProcessor
 from PIL import Image  # Use PIL instead of imghdr
 from image_handler import ImageHandler
 import time
@@ -80,6 +81,9 @@ def process_image():
         brightness_mapping = request.form.get('brightness_mapping', 'linear')
         gamma = float(request.form.get('gamma', 2.2))
         
+        processor_mode = request.form.get('processor_mode', 'grayscale')
+        color_palette_size = int(request.form.get('color_palette_size', 8))
+        
         print(f"Creating processor with parameters:")
         print(f"- num_colors: {num_colors}")
         print(f"- grid_size: {grid_size}")
@@ -90,17 +94,28 @@ def process_image():
         print(f"- brightness_mapping: {brightness_mapping}")
         print(f"- gamma: {gamma}")
         
-        # Initialize processor with parameters
-        processor = StixisProcessor(
-            num_colors=num_colors,
-            grid_size=grid_size,
-            smoothing=use_smoothing,
-            smoothing_sigma=smoothing_sigma,
-            enhance_contrast=enhance_contrast,
-            invert=invert,
-            brightness_mapping=brightness_mapping,
-            gamma=gamma
-        )
+        # Choose processor based on mode
+        if processor_mode == 'color':
+            processor = StixisColorProcessor(
+                num_colors=num_colors,
+                grid_size=grid_size,
+                smoothing=use_smoothing,
+                smoothing_sigma=smoothing_sigma,
+                enhance_contrast=enhance_contrast,
+                color_palette_size=color_palette_size,
+                invert=invert
+            )
+        else:
+            processor = StixisProcessor(
+                num_colors=num_colors,
+                grid_size=grid_size,
+                smoothing=use_smoothing,
+                smoothing_sigma=smoothing_sigma,
+                enhance_contrast=enhance_contrast,
+                invert=invert,
+                brightness_mapping=brightness_mapping,
+                gamma=gamma
+            )
         
         print(f"Processor created with invert={processor.invert}")
         

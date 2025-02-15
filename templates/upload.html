@@ -488,6 +488,16 @@
         </div>
 
         <div class="form-group">
+            <label>Processing Mode:
+                <select id="processor_mode" name="processor_mode">
+                    <option value="grayscale">Grayscale (Classic)</option>
+                    <option value="color">Color (Experimental)</option>
+                </select>
+            </label>
+            <p class="form-text">Choose between classic grayscale circles or colored circles based on image palette.</p>
+        </div>
+
+        <div class="form-group">
             <button type="button" id="toggle_advanced" class="secondary-button">
                 Show Advanced Settings
             </button>
@@ -514,6 +524,15 @@
                     <span id="gamma_value">2.2</span>
                 </label>
             </div>
+        </div>
+
+        <div id="color_settings" class="form-group" style="display: none;">
+            <label>Color Palette Size:
+                <input type="range" id="color_palette_size" name="color_palette_size" 
+                       min="4" max="16" step="1" value="8">
+                <span id="palette_size_value">8</span>
+            </label>
+            <p class="form-text">Number of colors to extract from the image (more colors = more detailed but slower)</p>
         </div>
 
         <button type="submit">Process Image</button>
