@@ -643,8 +643,13 @@
             for (let [key, value] of formData.entries()) {
                 if (key === 'file') {
                     commandParts.push(`    -F "file=@${value.name || 'your_image.jpg'}" \\`);
-                } else if (key === 'invert') {
-                    commandParts.push(`    -F "invert=${value === 'on' ? 'true' : 'false'}" \\`);
+                } else if (key === 'invert' || key === 'use_custom_grid' || 
+                          key === 'use_smoothing' || key === 'enhance_contrast') {
+                    commandParts.push(`    -F "${key}=${value === 'on' ? 'true' : 'false'}" \\`);
+                } else if (key === 'color_palette_size' && 
+                          document.getElementById('processor_mode').value === 'color') {
+                    // Only include color_palette_size if color mode is selected
+                    commandParts.push(`    -F "${key}=${value}" \\`);
                 } else {
                     commandParts.push(`    -F "${key}=${value}" \\`);
                 }
@@ -807,6 +812,19 @@
         document.getElementById('gamma').addEventListener('input', function() {
             document.getElementById('gamma_value').textContent = this.value;
             updateCurlCommand();
+        });
+
+        // Add event listener for color palette size
+        document.getElementById('color_palette_size').addEventListener('input', function() {
+            document.getElementById('palette_size_value').textContent = this.value;
+            updateCurlCommand();
+        });
+
+        // Add to processor mode change handler
+        document.getElementById('processor_mode').addEventListener('change', function() {
+            const colorSettings = document.getElementById('color_settings');
+            colorSettings.style.display = this.value === 'color' ? 'block' : 'none';
+            updateCurlCommand();  // Update curl command when mode changes
         });
     </script>
 </body>
