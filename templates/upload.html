@@ -18,6 +18,8 @@
             border-radius: 5px;
             overflow-x: auto;
             position: relative;
+            white-space: pre;  /* Preserve line breaks */
+            font-family: monospace;
         }
         .copy-button {
             position: absolute;
@@ -61,6 +63,53 @@
         .header p {
             color: #666;
             font-size: 1.1em;
+        }
+        code {
+            white-space: pre;  /* Preserve line breaks */
+        }
+        .api-section {
+            margin-top: 2rem;
+        }
+        
+        .curl-command {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1.5rem;
+            border-radius: 5px;
+            position: relative;
+            margin: 1rem 0;
+        }
+        
+        .curl-command pre {
+            margin: 0;
+            white-space: pre;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .curl-command code {
+            display: block;
+            padding-right: 2rem;
+        }
+        
+        .copy-button {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #444;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+        
+        .copy-button:hover {
+            background: #666;
         }
     </style>
 </head>
@@ -131,12 +180,22 @@
         <img id="result-image" alt="Processed image">
     </div>
 
-    <h2>API Usage</h2>
-    <p>You can also use the API directly with curl:</p>
-    <div class="curl-command">
-        <button class="copy-button" onclick="copyCommand()">Copy</button>
-        <code id="curl-command">curl -X POST http://localhost:5000/process -F "file=@your_image.jpg" -F "num_colors=5" -F "use_custom_grid=true" -F "grid_size=16" -F "use_smoothing=true" -F "smoothing_sigma=1.5" -F "enhance_contrast=true" -H "Accept: application/json"</code>
-    </div>
+    <section class="api-section">
+        <h2>API Usage</h2>
+        <p>You can also use the API directly with curl:</p>
+        <div class="curl-command">
+            <button class="copy-button" onclick="copyCommand()">Copy</button>
+            <pre><code id="curl-command">curl -X POST http://localhost:8000/process \
+    -F "file=@your_image.jpg" \
+    -F "num_colors=5" \
+    -F "use_custom_grid=true" \
+    -F "grid_size=16" \
+    -F "use_smoothing=true" \
+    -F "smoothing_sigma=1.5" \
+    -F "enhance_contrast=true" \
+    -H "Accept: application/json"</code></pre>
+        </div>
+    </section>
 
     <script>
         // Function to toggle visibility of dependent fields
@@ -190,11 +249,55 @@
             updateCurlCommand();
         });
 
-        // Copy curl command
+        // Function to update the curl command display
+        function updateCurlCommand() {
+            const form = document.getElementById('process-form');
+            const formData = new FormData(form);
+            
+            // Build command parts
+            const commandParts = [
+                'curl -X POST http://localhost:8000/process \\',
+                '    -H "Accept: application/json" \\'
+            ];
+            
+            // Add form fields
+            for (let [key, value] of formData.entries()) {
+                if (key === 'file') {
+                    commandParts.push(`    -F "file=@${value.name || 'your_image.jpg'}" \\`);
+                } else {
+                    commandParts.push(`    -F "${key}=${value}" \\`);
+                }
+            }
+            
+            // Remove trailing backslash from last line
+            commandParts[command.length - 1] = commandParts[command.length - 1].slice(0, -2);
+            
+            // Update display
+            document.getElementById('curl-command').textContent = commandParts.join('\n');
+        }
+        
+        // Function to copy the curl command
         function copyCommand() {
-            const command = document.getElementById('curl-command').innerText;
-            navigator.clipboard.writeText(command.replace(/\s+/g, ' ').trim())
-                .then(() => alert('Command copied to clipboard!'))
+            const command = document.getElementById('curl-command').textContent;
+            
+            // Create both versions
+            const multiline = command;
+            const singleline = command.replace(/\s*\\\n\s*/g, ' ').trim();
+            
+            // Show option dialog
+            const copyType = confirm(
+                'Choose copy format:\n\n' +
+                'OK - Copy as single line (for terminal)\n' +
+                'Cancel - Copy with line breaks (for scripts)'
+            );
+            
+            // Copy selected format
+            navigator.clipboard.writeText(copyType ? singleline : multiline)
+                .then(() => {
+                    const button = document.querySelector('.copy-button');
+                    button.textContent = 'Copied!';
+                    setTimeout(() => button.textContent = 'Copy', 2000);
+                })
                 .catch(err => console.error('Failed to copy:', err));
         }
 
@@ -237,25 +340,7 @@
             });
         });
 
-        // Update curl command based on form inputs
-        function updateCurlCommand() {
-            const form = document.getElementById('process-form');
-            const formData = new FormData(form);
-            let command = 'curl -X POST http://localhost:5000/process \\';
-            
-            for (let [key, value] of formData.entries()) {
-                if (key === 'file') {
-                    command += `\n-F "file=@${value.name || 'your_image.jpg'}" \\`;
-                } else {
-                    command += `\n-F "${key}=${value}" \\`;
-                }
-            }
-            command += '\n-H "Accept: application/json"';
-            
-            document.getElementById('curl-command').textContent = command;
-        }
-
-        // Add event listeners to all form inputs to update curl command
+        // Add event listeners to form inputs
         document.querySelectorAll('#process-form input').forEach(input => {
             input.addEventListener('change', updateCurlCommand);
         });

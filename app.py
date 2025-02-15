@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from stixis_processor import StixisProcessor
 from PIL import Image  # Use PIL instead of imghdr
 from image_handler import ImageHandler
+import time
 
 app = Flask(__name__)
 
@@ -41,60 +42,56 @@ def home():
 @app.route('/process', methods=['POST'])
 def process_image():
     if 'file' not in request.files:
-        abort(400, description="No file part")
+        return jsonify({'error': "No file part"}), 400
     
     file = request.files['file']
     if file.filename == '':
-        abort(400, description="No selected file")
+        return jsonify({'error': "No selected file"}), 400
 
     if not file or not allowed_file(file.filename):
-        abort(400, description="Invalid file type")
+        return jsonify({'error': "Invalid file type"}), 400
 
     filename = secure_filename(file.filename)
     save_path = UPLOAD_FOLDER / filename
+    output_path = None
     
     try:
         # Validate file is actually an image
-        print(f"Validating image: {filename}")  # Debug log
+        print(f"Validating image: {filename}")
         file_ext = validate_image(file.stream)
         if not file_ext:
-            abort(400, description="Invalid image file")
+            return jsonify({'error': "Invalid image file"}), 400
 
-        print(f"Saving file to: {save_path}")  # Debug log
+        print(f"Saving file to: {save_path}")
         file.save(save_path)
 
         # Get parameters from form/request
         try:
-            print("Processing form parameters")  # Debug log
+            print("Processing form parameters")
             num_colors = int(request.form.get('num_colors', 5))
             if not 2 <= num_colors <= 10:
-                abort(400, description="Number of colors must be between 2 and 10")
+                return jsonify({'error': "Number of colors must be between 2 and 10"}), 400
 
             use_custom_grid = request.form.get('use_custom_grid') == 'true'
             grid_size = None
             if use_custom_grid:
                 grid_size = int(request.form.get('grid_size', 0))
                 if grid_size < 4:
-                    abort(400, description="Grid size must be at least 4")
+                    return jsonify({'error': "Grid size must be at least 4"}), 400
 
             use_smoothing = request.form.get('use_smoothing') == 'true'
             smoothing_sigma = float(request.form.get('smoothing_sigma', 1.5))
             if use_smoothing and not 0.5 <= smoothing_sigma <= 3.0:
-                abort(400, description="Smoothing sigma must be between 0.5 and 3.0")
+                return jsonify({'error': "Smoothing sigma must be between 0.5 and 3.0"}), 400
 
             enhance_contrast = request.form.get('enhance_contrast') == 'true'
             
-            print(f"Parameters: colors={num_colors}, grid={grid_size}, "
-                  f"smooth={use_smoothing}, sigma={smoothing_sigma}, "
-                  f"contrast={enhance_contrast}")  # Debug log
-            
         except ValueError as e:
-            print(f"Parameter error: {str(e)}")  # Debug log
-            abort(400, description="Invalid parameter values")
+            return jsonify({'error': f"Invalid parameter values: {str(e)}"}), 400
 
         # Process image
         try:
-            print("Initializing processor")  # Debug log
+            print("Initializing processor")
             processor = StixisProcessor(
                 num_colors=num_colors,
                 grid_size=grid_size,
@@ -103,7 +100,7 @@ def process_image():
                 enhance_contrast=enhance_contrast
             )
             
-            print("Loading and processing image")  # Debug log
+            print("Loading and processing image")
             input_image = Image.open(save_path)
             output_image = processor.process(input_image)
             
@@ -111,60 +108,71 @@ def process_image():
             output_filename = f"processed_{filename}"
             output_path = UPLOAD_FOLDER / output_filename
             output_image.save(output_path)
-            processor.output_path = output_path
             
-            print(f"Processing complete, output at: {output_path}")  # Debug log
+            print(f"Processing complete, output at: {output_path}")
             
-        except Exception as e:
-            print(f"Processing error: {str(e)}")  # Debug log
-            abort(500, description=f"Error processing image: {str(e)}")
-
-        # Return processed image
-        try:
-            # Check if request is from API (Accept: application/json)
+            # Clean up input file early
+            if save_path.exists():
+                save_path.unlink()
+            
+            # Return response based on Accept header
             if request.headers.get('Accept') == 'application/json':
                 download_url = url_for('download_file', 
                                      filename=output_filename, 
                                      _external=True)
                 return jsonify({
+                    'status': 'success',
                     'message': 'Image processed successfully',
                     'download_url': download_url
-                })
+                }), 200
             
             # Browser request - return image directly
-            return send_file(processor.output_path, mimetype='image/jpeg')
+            return send_file(output_path, mimetype='image/jpeg')
             
         except Exception as e:
-            print(f"Response error: {str(e)}")  # Debug log
-            abort(500, description=f"Error sending response: {str(e)}")
+            print(f"Processing error: {str(e)}")
+            return jsonify({'error': f"Error processing image: {str(e)}"}), 500
 
     except Exception as e:
-        print(f"General error: {str(e)}")  # Debug log
-        abort(500, description=f"General error: {str(e)}")
+        print(f"General error: {str(e)}")
+        return jsonify({'error': f"General error: {str(e)}"}), 500
         
     finally:
-        # Clean up uploaded file
-        try:
-            if save_path.exists():
+        # Only clean up input file if it still exists
+        if save_path and save_path.exists():
+            try:
                 save_path.unlink()
-        except Exception as e:
-            print(f"Cleanup error: {str(e)}")  # Debug log
+            except Exception as e:
+                print(f"Cleanup error: {str(e)}")
 
-# Secure file download
+# Add cleanup schedule for processed files
+def cleanup_old_files():
+    """Clean up files older than 1 hour"""
+    current_time = time.time()
+    for file_path in UPLOAD_FOLDER.glob('processed_*'):
+        if current_time - file_path.stat().st_mtime > 3600:  # 1 hour
+            try:
+                file_path.unlink()
+            except Exception as e:
+                print(f"Cleanup error for {file_path}: {str(e)}")
+
 @app.route('/download/<filename>')
 def download_file(filename):
     if '..' in filename or filename.startswith('/'):
-        abort(404)
+        return jsonify({'error': "Invalid filename"}), 404
     
     try:
+        file_path = UPLOAD_FOLDER / secure_filename(filename)
+        if not file_path.exists():
+            return jsonify({'error': "File not found"}), 404
+            
         return send_file(
-            UPLOAD_FOLDER / secure_filename(filename),
+            file_path,
             as_attachment=True,
             download_name=filename
         )
-    except Exception:
-        abort(404)
+    except Exception as e:
+        return jsonify({'error': f"Error downloading file: {str(e)}"}), 404
 
 if __name__ == '__main__':
-    # In production, use proper WSGI server and don't run in debug mode
-    app.run(debug=True) 
+    app.run(debug=True, port=8000)  # Change port to 8000 
