@@ -447,7 +447,7 @@
         <p>You can also use the API directly with curl:</p>
         <div class="curl-command">
             <button class="copy-button" onclick="copyCommand()">Copy</button>
-            <pre><code id="curl-command">curl -X POST http://localhost:8000/process \
+            <pre><code id="curl-command">curl -X POST ${window.location.origin}/process \
     -F "file=@your_image.jpg" \
     -F "num_colors=5" \
     -F "use_custom_grid=true" \
@@ -515,8 +515,10 @@
         function updateCurlCommand() {
             const form = document.getElementById('process-form');
             const formData = new FormData(form);
+            const currentUrl = window.location.origin;  // Gets protocol, domain and port
+            
             const commandParts = [
-                'curl -X POST http://localhost:8000/process \\',
+                `curl -X POST ${currentUrl}/process \\`,
                 '    -H "Accept: application/json" \\'
             ];
             
@@ -529,7 +531,6 @@
             }
             
             commandParts[commandParts.length - 1] = commandParts[commandParts.length - 1].slice(0, -2);
-            
             document.getElementById('curl-command').textContent = commandParts.join('\n');
         }
         
