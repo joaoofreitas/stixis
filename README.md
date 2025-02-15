@@ -36,29 +36,44 @@ pip install -r requirements.txt
 
 ### 1. Command Line Interface (CLI)
 
-Run the processor from command line:
+The CLI supports both parameter-based and interactive modes.
+
+#### Parameter Mode:
 ```bash
-python main.py
+python main.py <image_path> [options]
 ```
 
-You'll be prompted to choose between:
-1. TestGrid mode - tests multiple parameter combinations
-2. Single process mode - process one image with specific parameters
+Options:
+- `--colors N`: Number of grayscale colors (2-10, default: 5)
+- `--grid-size N`: Number of grid divisions (4+)
+- `--smooth`: Enable smoothing
+- `--contrast`: Enable contrast enhancement
+- `--output-dir PATH`: Custom output directory
 
-#### Single Process Mode Options:
-- Number of colors (2-10)
-- Custom grid divisions (optional)
-- Smoothing options (with adjustable strength)
-- Contrast enhancement
+Examples:
+```bash
+# Basic usage with default parameters
+python main.py image.jpg
 
-#### TestGrid Mode:
-Automatically tests combinations of:
-- Colors: [2, 4, 6, 8, 10]
-- Divisions: [4, 8, 16, 32, 50]
-- Smoothing: On/Off
-- Contrast: On/Off
+# Full parameter specification
+python main.py image.jpg --colors 8 --grid-size 32 --smooth --contrast
 
-Results are saved in a directory named after your image (e.g., `myimage_stixis_patterns/`).
+# Custom output directory
+python main.py image.jpg --output-dir ./processed
+```
+
+#### Interactive Mode:
+If no parameters are provided (except the image path), the CLI will prompt for options:
+```bash
+python main.py
+> Enter path to image file: image.jpg
+> Enter number of colors (2-10): 5
+> Use custom grid? (y/n): y
+> Enter grid divisions: 16
+> Apply smoothing? (y/n): y
+> Smoothing strength (0.5-3.0): 1.5
+> Enhance contrast? (y/n): y
+```
 
 ### 2. Web Interface
 
@@ -84,26 +99,24 @@ curl -X POST http://localhost:5000/process \
   -F "file=@/path/to/your/image.jpg" \
   -F "num_colors=5" \
   -F "use_custom_grid=true" \
-  -F "grid_size=8" \
+  -F "grid_size=16" \
   -F "use_smoothing=true" \
   -F "smoothing_sigma=1.5" \
   -F "enhance_contrast=true" \
   -H "Accept: application/json"
 ```
 
-#### API Parameters
+## Parameters
 
-| Parameter | Type | Description | Range |
-|-----------|------|-------------|--------|
-| file | File | Image to process | jpg, jpeg, png |
-| num_colors | int | Number of grayscale colors | 2-10 |
-| use_custom_grid | bool | Enable custom grid | true/false |
-| grid_size | int | Number of divisions | 4+ |
-| use_smoothing | bool | Enable smoothing | true/false |
-| smoothing_sigma | float | Smoothing strength | 0.5-3.0 |
-| enhance_contrast | bool | Enable contrast | true/false |
+| Parameter | Type | Description | Range | Default |
+|-----------|------|-------------|--------|---------|
+| colors/num_colors | int | Number of grayscale colors | 2-10 | 5 |
+| grid-size | int | Number of divisions | 4+ | auto |
+| smooth/use_smoothing | bool | Enable smoothing | true/false | true |
+| smoothing_sigma | float | Smoothing strength | 0.5-3.0 | 1.5 |
+| contrast/enhance_contrast | bool | Enable contrast | true/false | true |
 
-## Output Files
+## Output
 
 Processed images are saved with descriptive filenames:
 ```
@@ -116,52 +129,6 @@ Components:
 - `_smooth`: Added if smoothing was applied
 - `_contrast`: Added if contrast enhancement was used
 
-## Example Usage
-
-### CLI Examples
-
-1. Single Process:
-```bash
-python main.py
-> Enter path to image file: photo.jpg
-> Enter number of colors (2-10): 5
-> Use custom grid? (y/n): y
-> Enter grid divisions: 16
-> Apply smoothing? (y/n): y
-> Smoothing strength: 1.5
-> Enhance contrast? (y/n): y
-```
-
-2. TestGrid Mode:
-```bash
-python main.py
-> Run TestGrid mode? (y/n): y
-> Enter path to image file: photo.jpg
-# Will process all combinations automatically
-```
-
-### API Examples
-
-1. Basic Usage:
-```bash
-curl -X POST http://localhost:5000/process \
-  -F "file=@photo.jpg" \
-  -F "num_colors=5"
-```
-
-2. Advanced Usage:
-```bash
-curl -X POST http://localhost:5000/process \
-  -F "file=@photo.jpg" \
-  -F "num_colors=8" \
-  -F "use_custom_grid=true" \
-  -F "grid_size=32" \
-  -F "use_smoothing=true" \
-  -F "smoothing_sigma=2.0" \
-  -F "enhance_contrast=true" \
-  -H "Accept: application/json"
-```
-
 ## Project Structure
 
 ```
@@ -169,7 +136,8 @@ stixis/
 ├── main.py           # CLI interface
 ├── app.py           # Flask web server
 ├── stixis_processor.py  # Core processing class
-├── utils.py         # Utility functions
+├── cli_utils.py     # CLI utilities
+├── image_handler.py # Image processing utilities
 ├── requirements.txt # Dependencies
 ├── templates/       # Web templates
 └── uploads/        # Processed images

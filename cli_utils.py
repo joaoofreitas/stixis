@@ -2,6 +2,9 @@ import os
 from PIL import Image
 import itertools
 from stixis_processor import StixisProcessor
+import argparse
+from pathlib import Path
+import sys
 
 def create_output_directory(image_path):
     """Create output directory based on image name."""
@@ -34,27 +37,27 @@ def get_grid_search_parameters(image_path):
         min_dimension = min(img.size)
         max_divisions = min(min_dimension // 2, 50)
     
-    color_range = range(2, 11, 2)
+    color_range = range(2, 11, 2)  # [2, 4, 6, 8, 10]
     division_range = [4, 8, 16, 32, min(max_divisions, 50)]
     
     return color_range, division_range
 
-def run_grid_search(image_path):
+def run_grid_search(image_path, output_dir=None):
     """Run grid search with different combinations of parameters."""
+    output_dir = output_dir or create_output_directory(image_path)
     color_range, division_range = get_grid_search_parameters(image_path)
-    output_dir = create_output_directory(image_path)
     
-    # Add smoothing and contrast parameters to grid search
+    # Grid search parameters
     smoothing_options = [False, True]
     contrast_options = [False, True]
-    smoothing_sigmas = [1.5]  # Increased from 1.0 for more aggressive smoothing
+    smoothing_sigmas = [1.5]
     
-    print(f"\nCreated output directory: {output_dir}")
-    print("\nStarting Grid Search...")
+    print(f"\nStarting Grid Search...")
+    print(f"Output directory: {output_dir}")
     print(f"Testing colors: {list(color_range)}")
     print(f"Testing divisions: {division_range}")
     print(f"Testing smoothing: {smoothing_options}")
-    print(f"Testing contrast enhancement: {contrast_options}")
+    print(f"Testing contrast: {contrast_options}")
     print("This may take a while depending on the image size and parameter range.\n")
     
     total_combinations = (len(color_range) * len(division_range) * 
@@ -69,45 +72,104 @@ def run_grid_search(image_path):
               f"Colors={num_colors}, Divisions={divisions}, "
               f"Smoothing={smoothing}, Contrast={enhance_contrast}")
         
-        processor = StixisProcessor(
-            num_colors, 
-            image_path, 
-            divisions, 
-            output_dir=output_dir,
-            smoothing=smoothing,
-            smoothing_sigma=smoothing_sigmas[0] if smoothing else 0.0,
-            enhance_contrast=enhance_contrast,
-            contrast_percentile=(2, 98)
-        )
-        processor.run()
+        try:
+            processor = StixisProcessor(
+                num_colors=num_colors,
+                grid_size=divisions,
+                smoothing=smoothing,
+                smoothing_sigma=smoothing_sigmas[0] if smoothing else 0.0,
+                enhance_contrast=enhance_contrast
+            )
+            
+            input_image = Image.open(image_path)
+            output_image = processor.process(input_image)
+            
+            # Generate output filename
+            filename = f"GS{num_colors}_DIV{divisions}"
+            if smoothing:
+                filename += "_smooth"
+            if enhance_contrast:
+                filename += "_contrast"
+            filename += ".jpg"
+            
+            output_path = Path(output_dir) / filename
+            output_image.save(output_path)
+            
+        except Exception as e:
+            print(f"Error processing combination: {str(e)}")
 
-def run_single_process():
-    """Run the processor with user-specified parameters."""
-    num_colors = int(input("Enter number of colors for the grayscale filter (2-10): "))
-    validate_input(num_colors)
+def prompt_for_parameters(image_path=None):
+    """Interactive prompt for processing parameters."""
+    if image_path is None:
+        image_path = input("Enter path to image file (jpg/jpeg/png): ")
     
-    image_path = input("Enter path to image file (jpg/jpeg/png): ")
+    print("\nChoose processing mode:")
+    print("1. Single image process")
+    print("2. Grid search (test multiple parameter combinations)")
+    mode = input("Enter mode (1/2): ").strip()
     
-    use_custom_grid = input("Do you want to specify custom grid divisions? (y/n): ").lower()
-    grid_size = None
+    if mode == "2":
+        output_dir = input("\nEnter output directory (optional, press Enter for default): ").strip()
+        output_dir = output_dir if output_dir else None
+        return {"mode": "grid_search", "image_path": image_path, "output_dir": output_dir}
     
-    if use_custom_grid == 'y':
-        grid_size = int(input("Enter number of grid divisions (minimum 4): "))
-        validate_grid_size(grid_size, image_path)
+    # Single process mode
+    try:
+        num_colors = int(input("\nEnter number of colors (2-10): "))
+        validate_input(num_colors)
+        
+        use_custom_grid = input("Use custom grid? (y/n): ").lower() == 'y'
+        grid_size = None
+        if use_custom_grid:
+            grid_size = int(input("Enter grid divisions (minimum 4): "))
+            validate_grid_size(grid_size, image_path)
+        
+        use_smoothing = input("Apply smoothing? (y/n): ").lower() == 'y'
+        smoothing_sigma = 1.5
+        if use_smoothing:
+            smoothing_sigma = float(input("Enter smoothing strength (0.5-3.0, default 1.5): ") or "1.5")
+        
+        enhance_contrast = input("Enhance contrast? (y/n): ").lower() == 'y'
+        
+        output_dir = input("Enter output directory (optional, press Enter for default): ").strip()
+        
+        return {
+            "mode": "single",
+            "image_path": image_path,
+            "params": {
+                "num_colors": num_colors,
+                "grid_size": grid_size,
+                "smoothing": use_smoothing,
+                "smoothing_sigma": smoothing_sigma,
+                "enhance_contrast": enhance_contrast
+            },
+            "output_dir": output_dir if output_dir else None
+        }
+        
+    except ValueError as e:
+        raise ValueError(f"Invalid input: {str(e)}")
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description='Stixis - Circle-based image processor')
+    parser.add_argument('image_path', type=str, nargs='?', help='Path to input image')
+    parser.add_argument('--colors', type=int, default=5, help='Number of grayscale colors (2-10)')
+    parser.add_argument('--grid-size', type=int, help='Number of grid divisions (4+)')
+    parser.add_argument('--output-dir', type=str, help='Output directory')
+    parser.add_argument('--smooth', action='store_true', help='Apply smoothing')
+    parser.add_argument('--contrast', action='store_true', help='Enhance contrast')
+    parser.add_argument('--grid-search', action='store_true', help='Run grid search mode')
     
-    use_smoothing = input("Do you want to apply smoothing to reduce noise? (y/n): ").lower() == 'y'
-    smoothing_sigma = 1.5  # Increased default
-    if use_smoothing:
-        smoothing_sigma = float(input("Enter smoothing strength (0.5-3.0, default 1.5): ") or "1.5")
+    args = parser.parse_args()
     
-    enhance_contrast = input("Do you want to enhance contrast? (y/n): ").lower() == 'y'
+    # If no arguments provided, return None to trigger interactive mode
+    if not args.image_path and len(sys.argv) == 1:
+        return None
     
-    processor = StixisProcessor(
-        num_colors, 
-        image_path, 
-        grid_size,
-        smoothing=use_smoothing,
-        smoothing_sigma=smoothing_sigma,
-        enhance_contrast=enhance_contrast
-    )
-    processor.run() 
+    # Validate arguments if provided
+    if args.image_path and not Path(args.image_path).exists():
+        raise ValueError(f"Image path does not exist: {args.image_path}")
+    if args.colors and not (2 <= args.colors <= 10):
+        raise ValueError("Colors must be between 2 and 10")
+    
+    return args 

@@ -89,8 +89,14 @@
         </div>
 
         <div class="form-group" id="grid_size_group" style="display: none;">
-            <label for="grid_size">Grid Divisions (4+):</label>
-            <input type="number" id="grid_size" name="grid_size" min="4" value="8">
+            <label for="grid_size">Grid Divisions (4-512):</label>
+            <input type="range" id="grid_size" name="grid_size" 
+                   min="4" max="512" value="16" 
+                   oninput="updateGridValue(this.value)">
+            <span id="grid_size_value">16</span>
+            <small class="form-text text-muted">
+                Higher number = more divisions = finer detail
+            </small>
         </div>
 
         <div class="form-group">
@@ -129,17 +135,7 @@
     <p>You can also use the API directly with curl:</p>
     <div class="curl-command">
         <button class="copy-button" onclick="copyCommand()">Copy</button>
-        <code id="curl-command">
-            curl -X POST http://localhost:5000/process \
-            -F "file=@/path/to/your/image.jpg" \
-            -F "num_colors=5" \
-            -F "use_custom_grid=true" \
-            -F "grid_size=8" \
-            -F "use_smoothing=true" \
-            -F "smoothing_sigma=1.5" \
-            -F "enhance_contrast=true" \
-            -H "Accept: application/json"
-        </code>
+        <code id="curl-command">curl -X POST http://localhost:5000/process -F "file=@your_image.jpg" -F "num_colors=5" -F "use_custom_grid=true" -F "grid_size=16" -F "use_smoothing=true" -F "smoothing_sigma=1.5" -F "enhance_contrast=true" -H "Accept: application/json"</code>
     </div>
 
     <script>
@@ -160,7 +156,7 @@
                 'use_smoothing': true,  // Default smoothing to on
                 'enhance_contrast': true,  // Default contrast to on
                 'num_colors': 5,
-                'grid_size': 8,
+                'grid_size': 16,
                 'smoothing_sigma': 1.5
             };
 
@@ -263,6 +259,11 @@
         document.querySelectorAll('#process-form input').forEach(input => {
             input.addEventListener('change', updateCurlCommand);
         });
+
+        // Add this function
+        function updateGridValue(value) {
+            document.getElementById('grid_size_value').textContent = value;
+        }
     </script>
 </body>
 </html> 
