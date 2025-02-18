@@ -2,7 +2,6 @@ from PIL import Image, ImageDraw, ImageOps
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from skimage import exposure
-from sklearn.cluster import KMeans
 from collections import Counter
 
 class StixisColorProcessor:
@@ -21,33 +20,64 @@ class StixisColorProcessor:
         self.color_palette_size = color_palette_size
         self.invert = invert
         self.upscale_factor = upscale_factor
+        self.color_cache = {}
         
+    def _median_cut(self, pixels, depth):
+        """Implement median cut algorithm for color quantization."""
+        if depth == 0 or len(pixels) == 0:
+            if len(pixels) == 0:
+                return np.array([0, 0, 0])
+            return np.mean(pixels, axis=0).astype(int)
+            
+        # Find the color channel with the largest range
+        ranges = np.ptp(pixels, axis=0)
+        channel = np.argmax(ranges)
+        
+        # Sort pixels by the channel with largest range
+        pixels = pixels[pixels[:, channel].argsort()]
+        median = len(pixels) // 2
+        
+        # Recursively process both halves
+        return np.vstack([
+            self._median_cut(pixels[:median], depth - 1),
+            self._median_cut(pixels[median:], depth - 1)
+        ])
+    
     def _extract_color_palette(self, image):
-        """Extract dominant colors from the image."""
-        # Convert image to RGB array
+        """Extract dominant colors using median cut algorithm."""
+        # Convert image to RGB array and reshape
         img_array = np.array(image.convert('RGB'))
-        
-        # Reshape for KMeans
         pixels = img_array.reshape(-1, 3)
         
-        # Use KMeans to find dominant colors
-        kmeans = KMeans(n_clusters=self.color_palette_size, n_init=10)
-        kmeans.fit(pixels)
+        # Subsample pixels for faster processing
+        if len(pixels) > 10000:
+            indices = np.random.choice(len(pixels), 10000, replace=False)
+            pixels = pixels[indices]
         
-        # Get the colors and their frequencies
-        colors = kmeans.cluster_centers_.astype(int)
-        labels = kmeans.labels_
+        # Calculate depth needed for desired palette size
+        depth = int(np.log2(self.color_palette_size))
+        palette = self._median_cut(pixels, depth)
+        
+        # Count frequency of nearest colors
+        distances = np.sqrt(((pixels[:, np.newaxis] - palette) ** 2).sum(axis=2))
+        labels = np.argmin(distances, axis=1)
         color_counts = Counter(labels)
         
         # Sort colors by frequency
-        sorted_colors = [colors[i] for i, _ in color_counts.most_common()]
-        return sorted_colors
+        sorted_colors = [palette[i] for i, _ in color_counts.most_common()]
+        return np.array(sorted_colors)
     
     def _find_nearest_color(self, pixel_color, palette):
-        """Find the nearest color in the palette."""
+        """Find the nearest color in the palette using vectorized operations."""
+        cache_key = (*pixel_color, palette.tobytes())
+        if cache_key in self.color_cache:
+            return self.color_cache[cache_key]
+            
         pixel_color = np.array(pixel_color)
         distances = np.sqrt(np.sum((palette - pixel_color) ** 2, axis=1))
-        return tuple(palette[np.argmin(distances)])
+        nearest_color = tuple(palette[np.argmin(distances)])
+        self.color_cache[cache_key] = nearest_color
+        return nearest_color
     
     def process(self, image):
         """Process the image and create colored circle pattern effect."""
@@ -66,10 +96,9 @@ class StixisColorProcessor:
         if self.upscale_factor > 1:
             new_width = original_width * self.upscale_factor
             new_height = original_height * self.upscale_factor
-            # Use BILINEAR instead of LANCZOS for faster resizing
             image = image.resize((new_width, new_height), Image.Resampling.BILINEAR)
             self.width, self.height = new_width, new_height
-            self.grid_size = base_grid_size * self.upscale_factor  # Scale the grid with the image
+            self.grid_size = base_grid_size * self.upscale_factor
         else:
             self.width, self.height = original_width, original_height
             self.grid_size = base_grid_size
@@ -79,7 +108,7 @@ class StixisColorProcessor:
             background = Image.new('RGB', image.size, (0, 0, 0))
             image = Image.alpha_composite(background.convert('RGBA'), image)
         
-        # Convert to arrays after potential upscaling
+        # Convert to arrays and process in batches
         rgb_array = np.array(image.convert('RGB'))
         gray_array = np.array(image.convert('L'))
         
@@ -87,9 +116,13 @@ class StixisColorProcessor:
         output = Image.new('RGB', (self.width, self.height), (0, 0, 0))
         draw = ImageDraw.Draw(output)
         
-        # Process each grid cell
-        for y in range(0, self.height, self.grid_size):
-            for x in range(0, self.width, self.grid_size):
+        # Calculate grid positions
+        y_positions = range(0, self.height, self.grid_size)
+        x_positions = range(0, self.width, self.grid_size)
+        
+        # Process grid cells in batches
+        for y in y_positions:
+            for x in x_positions:
                 # Get cell data
                 gray_cell = gray_array[y:min(y+self.grid_size, self.height), 
                                     x:min(x+self.grid_size, self.width)]

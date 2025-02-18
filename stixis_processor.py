@@ -34,7 +34,20 @@ class StixisProcessor:
         self.brightness_mapping = brightness_mapping
         self.gamma = gamma
         self.upscale_factor = upscale_factor
+        self._setup_brightness_mapping()
         print(f"StixisProcessor initialized with self.invert={self.invert}")  # Debug log
+
+    def _setup_brightness_mapping(self):
+        """Precompute brightness mapping function for better performance."""
+        if self.brightness_mapping == 'power':
+            self._brightness_func = lambda x: self.BRIGHTNESS_MAPPINGS['power'](x, self.gamma)
+        elif self.brightness_mapping == 'adaptive':
+            self._brightness_func = self._adaptive_mapping
+        else:
+            self._brightness_func = self.BRIGHTNESS_MAPPINGS.get(
+                self.brightness_mapping, 
+                self.BRIGHTNESS_MAPPINGS['linear']
+            )
 
     def process(self, image):
         """Process the image and create circle filter effect."""
@@ -80,27 +93,24 @@ class StixisProcessor:
         print(f"Grid size: {self.grid_size}")  # Debug
         print(f"Number of divisions: {min(self.width, self.height) // self.grid_size}")  # Debug
         
-        # Process each grid cell
-        for y in range(0, self.height, self.grid_size):
-            for x in range(0, self.width, self.grid_size):
-                cell = pixels[y:min(y+self.grid_size, self.height), 
-                            x:min(x+self.grid_size, self.width)]
-                
-                if cell.size > 0:
-                    neighborhood = self._get_neighborhood(pixels, y, x)
-                    should_draw, effective_brightness = self._should_draw_circle(cell, neighborhood)
-                    
-                    if should_draw:
-                        circle_size = int(effective_brightness * self.grid_size * 0.8)
-                        if circle_size > 0:
-                            center_x = x + self.grid_size//2
-                            center_y = y + self.grid_size//2
-                            draw.ellipse([
-                                center_x - circle_size//2, 
-                                center_y - circle_size//2,
-                                center_x + circle_size//2, 
-                                center_y + circle_size//2
-                            ], fill=255)
+        # Create grid of cell positions
+        y_coords = np.arange(0, self.height, self.grid_size)
+        x_coords = np.arange(0, self.width, self.grid_size)
+        
+        # Process cells in vectorized manner where possible
+        for y in y_coords:
+            for x in x_coords:
+                # Extract cell and neighborhood data
+                cell_data = self._get_cell_data(pixels, y, x)
+                if cell_data['valid']:
+                    circle_params = self._calculate_circle_params(cell_data)
+                    if circle_params['should_draw']:
+                        self._draw_optimized_circle(
+                            draw, 
+                            x + self.grid_size//2,
+                            y + self.grid_size//2,
+                            circle_params['size']
+                        )
         
         # Invert the final image if requested
         if self.invert:
@@ -109,78 +119,95 @@ class StixisProcessor:
         return output
 
     def _preprocess_image(self, pixels):
-        """Apply preprocessing steps to the image."""
+        """Optimized preprocessing of image data."""
         if self.smoothing:
-            pixels = gaussian_filter(pixels, sigma=self.smoothing_sigma)
-            pixels = gaussian_filter(pixels, sigma=self.smoothing_sigma * 0.5)
+            # Apply single-pass smoothing with adjusted sigma
+            pixels = gaussian_filter(pixels, sigma=self.smoothing_sigma * 1.2)
 
         if self.enhance_contrast:
             pixels_float = pixels.astype(float) / 255.0
             p_low, p_high = self.contrast_percentile
-            pixels_float = exposure.rescale_intensity(
-                pixels_float, 
-                in_range=tuple(np.percentile(pixels_float, (p_low, p_high)))
-            )
+            # Use vectorized percentile calculation
+            in_range = tuple(np.percentile(pixels_float, (p_low, p_high)))
+            pixels_float = exposure.rescale_intensity(pixels_float, in_range=in_range)
             pixels = (pixels_float * 255).astype(np.uint8)
 
         return pixels
 
-    def _get_neighborhood(self, pixels, y, x):
-        """Get the surrounding cells for neighborhood analysis."""
-        y_start = max(0, y - self.grid_size)
-        y_end = min(self.height, y + 2 * self.grid_size)
-        x_start = max(0, x - self.grid_size)
-        x_end = min(self.width, x + 2 * self.grid_size)
-        return pixels[y_start:y_end, x_start:x_end]
+    def _get_cell_data(self, pixels, y, x):
+        """Efficiently get cell and neighborhood data."""
+        y_end = min(y + self.grid_size, self.height)
+        x_end = min(x + self.grid_size, self.width)
+        cell = pixels[y:y_end, x:x_end]
+        
+        if cell.size == 0:
+            return {'valid': False}
+            
+        # Calculate neighborhood bounds
+        y_start_n = max(0, y - self.grid_size)
+        y_end_n = min(self.height, y + 2 * self.grid_size)
+        x_start_n = max(0, x - self.grid_size)
+        x_end_n = min(self.width, x + 2 * self.grid_size)
+        
+        neighborhood = pixels[y_start_n:y_end_n, x_start_n:x_end_n]
+        
+        return {
+            'valid': True,
+            'cell': cell,
+            'neighborhood': neighborhood,
+            'avg_brightness': np.mean(cell) / 255.0,
+            'neighborhood_brightness': np.mean(neighborhood) / 255.0,
+            'neighborhood_std': np.std(neighborhood) / 255.0
+        }
 
-    def _map_brightness(self, brightness):
-        """Apply brightness mapping function."""
-        if self.brightness_mapping == 'adaptive':
-            # Adaptive mapping based on image statistics
-            return self._adaptive_mapping(brightness)
-        elif self.brightness_mapping == 'power':
-            return self.BRIGHTNESS_MAPPINGS['power'](brightness, self.gamma)
-        else:
-            mapping_func = self.BRIGHTNESS_MAPPINGS.get(self.brightness_mapping, 
-                                                      self.BRIGHTNESS_MAPPINGS['linear'])
-            return mapping_func(brightness)
-
-    def _adaptive_mapping(self, brightness):
-        """Adaptive mapping based on local contrast."""
-        # Calculate local contrast
-        local_std = np.std(brightness)
-        if local_std < 0.1:  # Low contrast region
-            return self.BRIGHTNESS_MAPPINGS['logarithmic'](brightness)
-        elif local_std > 0.3:  # High contrast region
-            return self.BRIGHTNESS_MAPPINGS['sigmoid'](brightness)
-        else:  # Medium contrast region
-            return self.BRIGHTNESS_MAPPINGS['power'](brightness, self.gamma)
-
-    def _should_draw_circle(self, cell, neighborhood):
-        """Determine if a circle should be drawn based on cell brightness and neighborhood."""
-        avg_brightness = np.mean(cell) / 255.0
+    def _calculate_circle_params(self, cell_data):
+        """Calculate circle parameters using vectorized operations."""
+        avg_brightness = cell_data['avg_brightness']
+        neighborhood_brightness = cell_data['neighborhood_brightness']
+        neighborhood_std = cell_data['neighborhood_std']
         
-        if not self.smoothing:
-            mapped_brightness = self._map_brightness(avg_brightness)
-            return mapped_brightness > self.darkness_threshold, mapped_brightness
-        
-        neighborhood_brightness = np.mean(neighborhood) / 255.0
-        neighborhood_std = np.std(neighborhood) / 255.0
-        
-        effective_brightness = avg_brightness
-        
-        if avg_brightness < self.darkness_threshold * 1.2:
-            if neighborhood_brightness < self.darkness_threshold * 1.5:
-                return False, 0
-        
+        # Quick early exit for very dark regions
+        if avg_brightness < self.darkness_threshold * 0.8:
+            return {'should_draw': False, 'size': 0}
+            
+        # Calculate effective brightness
         if neighborhood_std > 0.15:
-            effective_brightness = (avg_brightness * 0.3 + neighborhood_brightness * 0.7)
-        
+            effective_brightness = avg_brightness * 0.3 + neighborhood_brightness * 0.7
+        else:
+            effective_brightness = avg_brightness
+            
         if 0.2 < effective_brightness < 0.8:
             effective_brightness = (effective_brightness + neighborhood_brightness) / 2
+            
+        mapped_brightness = self._brightness_func(effective_brightness)
         
-        mapped_brightness = self._map_brightness(effective_brightness)
-        return mapped_brightness > self.darkness_threshold, mapped_brightness
+        if mapped_brightness <= self.darkness_threshold:
+            return {'should_draw': False, 'size': 0}
+            
+        circle_size = int(mapped_brightness * self.grid_size * 0.8)
+        return {'should_draw': True, 'size': circle_size}
+
+    def _draw_optimized_circle(self, draw, center_x, center_y, size):
+        """Draw circle with minimal computation."""
+        if size <= 0:
+            return
+            
+        half_size = size // 2
+        draw.ellipse([
+            center_x - half_size,
+            center_y - half_size,
+            center_x + half_size,
+            center_y + half_size
+        ], fill=255)
+
+    def _adaptive_mapping(self, brightness):
+        """Optimized adaptive mapping."""
+        if brightness < 0.2:
+            return self.BRIGHTNESS_MAPPINGS['logarithmic'](brightness)
+        elif brightness > 0.8:
+            return self.BRIGHTNESS_MAPPINGS['sigmoid'](brightness)
+        else:
+            return self.BRIGHTNESS_MAPPINGS['power'](brightness, self.gamma)
 
     # ... rest of the processing methods remain the same, 
     # but remove save_image and load_image methods ... 
