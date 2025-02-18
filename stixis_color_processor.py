@@ -79,6 +79,29 @@ class StixisColorProcessor:
         self.color_cache[cache_key] = nearest_color
         return nearest_color
     
+    def _draw_pixel_perfect_circle(self, draw, center_x, center_y, size, color):
+        """Draw a perfectly crisp colored circle without any artifacts."""
+        if size <= 0:
+            return
+            
+        radius = size // 2
+        if radius == 0:
+            draw.point((center_x, center_y), fill=color)
+            return
+
+        # Draw filled circle using optimized scanline algorithm
+        for y in range(-radius, radius + 1):
+            x_val = int((radius * radius - y * y) ** 0.5)
+            x_start = center_x - x_val
+            x_end = center_x + x_val + 1
+            # Draw horizontal line
+            for x in range(x_start, x_end):
+                draw.point((x, center_y + y), fill=color)
+
+    def save_image(self, image, file_path):
+        """Save the processed image as a PNG file."""
+        image.save(file_path, format='PNG')
+
     def process(self, image):
         """Process the image and create colored circle pattern effect."""
         original_width, original_height = image.size
@@ -143,15 +166,21 @@ class StixisColorProcessor:
                         if circle_size > 0:
                             center_x = x + self.grid_size//2
                             center_y = y + self.grid_size//2
-                            draw.ellipse([
-                                center_x - circle_size//2, 
-                                center_y - circle_size//2,
-                                center_x + circle_size//2, 
-                                center_y + circle_size//2
-                            ], fill=circle_color)
+                            self._draw_pixel_perfect_circle(
+                                draw, 
+                                center_x, 
+                                center_y, 
+                                circle_size, 
+                                circle_color
+                            )
         
         # Invert the final image if requested
         if self.invert:
             output = ImageOps.invert(output)
         
         return output 
+
+    def process_and_save(self, image, file_path):
+        """Process the image and save the result as a PNG file."""
+        processed_image = self.process(image)
+        self.save_image(processed_image, file_path) 

@@ -90,10 +90,10 @@ def run_grid_search(image_path, output_dir=None):
                 filename += "_smooth"
             if enhance_contrast:
                 filename += "_contrast"
-            filename += ".jpg"
+            filename += ".png"
             
             output_path = Path(output_dir) / filename
-            output_image.save(output_path)
+            output_image.save(output_path, format='PNG', optimize=False)
             
         except Exception as e:
             print(f"Error processing combination: {str(e)}")

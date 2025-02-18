@@ -15,10 +15,11 @@ class ImageHandler:
         """Save processed image with appropriate naming."""
         smooth_suffix = "_smooth" if smoothing else ""
         contrast_suffix = "_contrast" if enhance_contrast else ""
-        filename = f"{original_name}_GS{num_colors}_DIV{divisions}{smooth_suffix}{contrast_suffix}.jpg"
+        filename = f"{original_name}_GS{num_colors}_DIV{divisions}{smooth_suffix}{contrast_suffix}.png"
         output_path = self.output_dir / filename
         
-        image.save(output_path)
+        # Save with maximum quality PNG settings
+        image.save(output_path, format='PNG', optimize=False)
         return output_path
 
     @staticmethod

@@ -127,9 +127,9 @@ def process_image():
             output_image = processor.process(input_image)
             
             # Save the processed image
-            output_filename = f"processed_{filename}"
+            output_filename = f"processed_{filename.rsplit('.', 1)[0]}.png"
             output_path = UPLOAD_FOLDER / output_filename
-            output_image.save(output_path)
+            output_image.save(output_path, format='PNG', optimize=False)
             
             print(f"Processing complete, output at: {output_path}")
             
@@ -149,7 +149,7 @@ def process_image():
                 }), 200
             
             # Browser request - return image directly
-            return send_file(output_path, mimetype='image/jpeg')
+            return send_file(output_path, mimetype='image/png')
             
         except Exception as e:
             print(f"Processing error: {str(e)}")

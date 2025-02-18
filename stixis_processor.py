@@ -188,17 +188,23 @@ class StixisProcessor:
         return {'should_draw': True, 'size': circle_size}
 
     def _draw_optimized_circle(self, draw, center_x, center_y, size):
-        """Draw circle with minimal computation."""
+        """Draw a perfectly crisp circle without any artifacts."""
         if size <= 0:
             return
             
-        half_size = size // 2
-        draw.ellipse([
-            center_x - half_size,
-            center_y - half_size,
-            center_x + half_size,
-            center_y + half_size
-        ], fill=255)
+        radius = size // 2
+        if radius == 0:
+            draw.point((center_x, center_y), fill=255)
+            return
+
+        # Draw filled circle using optimized scanline algorithm
+        for y in range(-radius, radius + 1):
+            x_val = int((radius * radius - y * y) ** 0.5)
+            x_start = center_x - x_val
+            x_end = center_x + x_val + 1
+            # Draw horizontal line
+            for x in range(x_start, x_end):
+                draw.point((x, center_y + y), fill=255)
 
     def _adaptive_mapping(self, brightness):
         """Optimized adaptive mapping."""
