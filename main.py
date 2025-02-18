@@ -8,7 +8,7 @@ def main():
     parser = argparse.ArgumentParser(description='Stixis - Circle Pattern Generator')
     parser.add_argument('--input', type=str, help='Input image path')
     parser.add_argument('--output', type=str, help='Output image path')
-    parser.add_argument('--colors', type=int, default=5, help='Number of grayscale colors (2-10)')
+    parser.add_argument('--colors', type=int, default=5, help='Number of circle sizes (2-10)')
     parser.add_argument('--grid-size', type=int, help='Number of grid divisions (4+)')
     parser.add_argument('--smooth', action='store_true', help='Apply smoothing')
     parser.add_argument('--sigma', type=float, default=1.5, help='Smoothing sigma value')
@@ -23,6 +23,8 @@ def main():
                       default='linear', help='Brightness mapping mode')
     parser.add_argument('--gamma', type=float, default=2.2,
                       help='Gamma value for power mapping')
+    parser.add_argument('--upscale', type=int, choices=[1, 2, 4, 8], default=1,
+                       help='Upscale factor for better quality (1x, 2x, 4x, 8x)')
 
     args = parser.parse_args()
 

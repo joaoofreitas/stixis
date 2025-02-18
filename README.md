@@ -25,7 +25,8 @@ Stixis is a Python-based image processing tool that transforms images into artis
 ## Features
 
 ### Basic Controls
-- Adjustable number of colors/divisions (2-10)
+- Adjustable number of circle sizes (2-10)
+- Output quality settings (1x, 2x, 4x, 8x)
 - Custom grid size option (4+)
 - Smoothing with adjustable sigma
 - Contrast enhancement
@@ -89,14 +90,15 @@ python main.py --input image.jpg \
                --mode color \
                --palette-size 8 \
                --mapping logarithmic \
-               --gamma 2.2
+               --gamma 2.2 \
+               --upscale 2
 ```
 
 #### Command Line Options
 ```
 --input INPUT           Input image path
 --output OUTPUT         Output image path (optional, defaults to input_stixis.jpg)
---colors COLORS         Number of grayscale colors (2-10, default: 5)
+--colors COLORS         Number of circle sizes (2-10, default: 5)
 --grid-size GRID_SIZE   Number of grid divisions (4+)
 --smooth               Enable smoothing
 --sigma SIGMA          Smoothing sigma value (default: 1.5)
@@ -107,6 +109,7 @@ python main.py --input image.jpg \
 --mapping MODE         Brightness mapping mode:
                       {linear,logarithmic,exponential,sigmoid,power,adaptive}
 --gamma GAMMA          Gamma value for power mapping (default: 2.2)
+--upscale {1,2,4,8}    Upscale factor for better quality (default: 1)
 ```
 
 ## API Usage
@@ -118,6 +121,7 @@ curl -X POST http://localhost:8000/process \
     -H "Accept: application/json" \
     -F "file=@image.jpg" \
     -F "num_colors=5" \
+    -F "upscale_factor=2" \
     -F "use_custom_grid=true" \
     -F "grid_size=16" \
     -F "use_smoothing=true" \
@@ -130,20 +134,21 @@ curl -X POST http://localhost:8000/process \
     -F "gamma=2.2"
 ```
 
-
-
 ## Tips for Best Results
 
 1. **Use images with black background**
 
 2. **For Detailed Images:**
-   - Use higher color count (8-10)
+   - Use more circle sizes (8-10)
+   - Use higher quality setting (2x or 4x)
    - Smaller grid size (higher number)
    - Enable smoothing
    - Try logarithmic mapping for dark details
 
 3. **For High Contrast Images:**
-   - Use fewer colors (4-6)
+   - Use fewer circle sizes (4-6)
+   - Use normal quality (1x)
+   - Larger grid size
    - Enable contrast enhancement
    - Try sigmoid mapping
    - Adjust gamma if using power mapping
@@ -152,3 +157,10 @@ curl -X POST http://localhost:8000/process \
    - Start with 8 colors in palette
    - Adjust based on image complexity
    - Use smoothing for better color transitions
+
+2. **For Performance:**
+   - Use fewer circle sizes (4-6)
+   - Use normal quality (1x)
+   - Larger grid size
+   - Enable smoothing
+   - Try logarithmic mapping for dark details

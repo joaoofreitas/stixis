@@ -9,7 +9,7 @@ class StixisColorProcessor:
     def __init__(self, num_colors=5, grid_size=None, smoothing=False, 
                  smoothing_sigma=1.0, darkness_threshold=0.1,
                  enhance_contrast=False, contrast_percentile=(2, 98),
-                 color_palette_size=8, invert=False):
+                 color_palette_size=8, invert=False, upscale_factor=1):
         """Initialize the Stixis color processor."""
         self.num_colors = num_colors
         self.grid_size = grid_size
@@ -20,6 +20,7 @@ class StixisColorProcessor:
         self.contrast_percentile = contrast_percentile
         self.color_palette_size = color_palette_size
         self.invert = invert
+        self.upscale_factor = upscale_factor
         
     def _extract_color_palette(self, image):
         """Extract dominant colors from the image."""
@@ -50,32 +51,41 @@ class StixisColorProcessor:
     
     def process(self, image):
         """Process the image and create colored circle pattern effect."""
-        self.width, self.height = image.size
+        original_width, original_height = image.size
+        
+        # Extract color palette BEFORE upscaling
+        color_palette = self._extract_color_palette(image)
+        
+        # Calculate base grid size before upscaling
+        if self.grid_size is None:
+            base_grid_size = min(original_width, original_height) // self.num_colors
+        else:
+            base_grid_size = min(original_width, original_height) // self.grid_size
+        
+        # Apply upscaling if requested
+        if self.upscale_factor > 1:
+            new_width = original_width * self.upscale_factor
+            new_height = original_height * self.upscale_factor
+            # Use BILINEAR instead of LANCZOS for faster resizing
+            image = image.resize((new_width, new_height), Image.Resampling.BILINEAR)
+            self.width, self.height = new_width, new_height
+            self.grid_size = base_grid_size * self.upscale_factor  # Scale the grid with the image
+        else:
+            self.width, self.height = original_width, original_height
+            self.grid_size = base_grid_size
         
         # Handle transparency
         if image.mode == 'RGBA':
             background = Image.new('RGB', image.size, (0, 0, 0))
             image = Image.alpha_composite(background.convert('RGBA'), image)
         
-        # Extract color palette
-        color_palette = self._extract_color_palette(image)
-        
-        # Convert to RGB for color processing
-        rgb_image = image.convert('RGB')
-        rgb_array = np.array(rgb_image)
-        
-        # Convert to grayscale for brightness
+        # Convert to arrays after potential upscaling
+        rgb_array = np.array(image.convert('RGB'))
         gray_array = np.array(image.convert('L'))
         
-        # Create output image with black background
+        # Create output image
         output = Image.new('RGB', (self.width, self.height), (0, 0, 0))
         draw = ImageDraw.Draw(output)
-        
-        # Calculate grid size based on divisions
-        if self.grid_size is None:
-            self.grid_size = min(self.width, self.height) // self.num_colors
-        else:
-            self.grid_size = min(self.width, self.height) // self.grid_size
         
         # Process each grid cell
         for y in range(0, self.height, self.grid_size):

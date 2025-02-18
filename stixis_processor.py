@@ -17,7 +17,8 @@ class StixisProcessor:
     def __init__(self, num_colors, grid_size=None, smoothing=False, 
                  smoothing_sigma=1.0, darkness_threshold=0.1,
                  enhance_contrast=False, contrast_percentile=(2, 98), 
-                 invert=False, brightness_mapping='linear', gamma=2.2):
+                 invert=False, brightness_mapping='linear', gamma=2.2,
+                 upscale_factor=1):
         """Initialize the Stixis processor with the given parameters."""
         print(f"StixisProcessor.__init__ called with invert={invert}")  # Debug log
         self.num_colors = num_colors
@@ -32,37 +33,48 @@ class StixisProcessor:
         self.invert = invert
         self.brightness_mapping = brightness_mapping
         self.gamma = gamma
+        self.upscale_factor = upscale_factor
         print(f"StixisProcessor initialized with self.invert={self.invert}")  # Debug log
 
     def process(self, image):
         """Process the image and create circle filter effect."""
-        self.width, self.height = image.size
+        original_width, original_height = image.size
         
         # Handle transparency by converting transparent pixels to black
         if image.mode == 'RGBA':
-            # Create a black background
             background = Image.new('RGB', image.size, (0, 0, 0))
-            # Alpha composite the image over the black background
             image = Image.alpha_composite(background.convert('RGBA'), image)
         
-        # Convert to grayscale
+        # Convert to grayscale first
         pixels = np.array(image.convert('L'))
         
-        # Apply preprocessing
+        # Apply preprocessing before upscaling
         pixels = self._preprocess_image(pixels)
+        
+        # Calculate base grid size
+        if self.grid_size is None:
+            base_grid_size = min(original_width, original_height) // self.num_colors
+        else:
+            base_grid_size = min(original_width, original_height) // self.grid_size
+        
+        # Apply upscaling after preprocessing if requested
+        if self.upscale_factor > 1:
+            # Convert preprocessed pixels back to image for high-quality upscaling
+            processed_image = Image.fromarray(pixels)
+            new_width = original_width * self.upscale_factor
+            new_height = original_height * self.upscale_factor
+            # Use LANCZOS for better quality upscaling of preprocessed image
+            processed_image = processed_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            pixels = np.array(processed_image)
+            self.width, self.height = new_width, new_height
+            self.grid_size = base_grid_size * self.upscale_factor
+        else:
+            self.width, self.height = original_width, original_height
+            self.grid_size = base_grid_size
         
         # Create output image
         output = Image.new('L', (self.width, self.height), 0)
         draw = ImageDraw.Draw(output)
-        
-        # Calculate grid size based on divisions
-        if self.grid_size is None:
-            # Default behavior based on num_colors
-            self.grid_size = min(self.width, self.height) // self.num_colors
-        else:
-            # When custom grid divisions are specified
-            # Higher number = more divisions = smaller grid size
-            self.grid_size = min(self.width, self.height) // self.grid_size
         
         print(f"Image dimensions: {self.width}x{self.height}")  # Debug
         print(f"Grid size: {self.grid_size}")  # Debug
@@ -92,7 +104,6 @@ class StixisProcessor:
         
         # Invert the final image if requested
         if self.invert:
-            print("Inverting final image")  # Debug log
             output = ImageOps.invert(output)
         
         return output

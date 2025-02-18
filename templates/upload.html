@@ -439,8 +439,9 @@
         </div>
 
         <div class="form-group">
-            <label for="num_colors">Number of Colors (2-10):</label>
-            <input type="number" id="num_colors" name="num_colors" min="2" max="10" value="5">
+            <label for="num_colors"># of Circle Sizes (2-10):</label>
+            <input type="number" id="num_colors" name="num_colors" 
+                   min="2" max="10" value="5" required>
         </div>
 
         <div class="form-group">
@@ -495,6 +496,18 @@
                 </select>
             </label>
             <p class="form-text">Choose between classic grayscale circles or colored circles based on image palette.</p>
+        </div>
+
+        <div class="form-group">
+            <label for="upscale_factor">Output Quality:
+                <select id="upscale_factor" name="upscale_factor">
+                    <option value="1">Normal (1x)</option>
+                    <option value="2">High (2x)</option>
+                    <option value="4">Ultra (4x)</option>
+                    <option value="8">Maximum (8x)</option>
+                </select>
+            </label>
+            <p class="form-text">Higher quality means better circles but slower processing</p>
         </div>
 
         <div class="form-group">

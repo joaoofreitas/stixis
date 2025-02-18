@@ -67,22 +67,18 @@ def process_image():
         file.save(save_path)
 
         # Get parameters from form
-        invert = request.form.get('invert') == 'true'
-        print(f"Invert parameter received: {request.form.get('invert')}")
-        print(f"Invert parameter parsed: {invert}")
-        
         num_colors = int(request.form.get('num_colors', 5))
         use_custom_grid = request.form.get('use_custom_grid') == 'true'
         grid_size = int(request.form.get('grid_size', 0)) if use_custom_grid else None
         use_smoothing = request.form.get('use_smoothing') == 'true'
         smoothing_sigma = float(request.form.get('smoothing_sigma', 1.5))
         enhance_contrast = request.form.get('enhance_contrast') == 'true'
-        
-        brightness_mapping = request.form.get('brightness_mapping', 'linear')
-        gamma = float(request.form.get('gamma', 2.2))
-        
+        invert = request.form.get('invert') == 'true'
         processor_mode = request.form.get('processor_mode', 'grayscale')
         color_palette_size = int(request.form.get('color_palette_size', 8))
+        brightness_mapping = request.form.get('brightness_mapping', 'linear')
+        gamma = float(request.form.get('gamma', 2.2))
+        upscale_factor = int(request.form.get('upscale_factor', 1))
         
         print(f"Creating processor with parameters:")
         print(f"- num_colors: {num_colors}")
@@ -91,8 +87,11 @@ def process_image():
         print(f"- smoothing_sigma: {smoothing_sigma}")
         print(f"- enhance_contrast: {enhance_contrast}")
         print(f"- invert: {invert}")
+        print(f"- processor_mode: {processor_mode}")
+        print(f"- color_palette_size: {color_palette_size}")
         print(f"- brightness_mapping: {brightness_mapping}")
         print(f"- gamma: {gamma}")
+        print(f"- upscale_factor: {upscale_factor}")
         
         # Choose processor based on mode
         if processor_mode == 'color':
@@ -103,7 +102,8 @@ def process_image():
                 smoothing_sigma=smoothing_sigma,
                 enhance_contrast=enhance_contrast,
                 color_palette_size=color_palette_size,
-                invert=invert
+                invert=invert,
+                upscale_factor=upscale_factor
             )
         else:
             processor = StixisProcessor(
@@ -114,7 +114,8 @@ def process_image():
                 enhance_contrast=enhance_contrast,
                 invert=invert,
                 brightness_mapping=brightness_mapping,
-                gamma=gamma
+                gamma=gamma,
+                upscale_factor=upscale_factor
             )
         
         print(f"Processor created with invert={processor.invert}")
