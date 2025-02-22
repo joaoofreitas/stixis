@@ -2,6 +2,10 @@
 
 Stixis is a Python-based image processing tool that transforms images into artistic circle patterns. It offers both a web interface and command-line functionality.
 
+_Try it out at [https://stixis.onrender.com/](https://stixis.onrender.com/)_
+
+**Note:** The current deployment is using a free tier of Render, so it may take a few seconds to start up.
+
 ## Examples
 
 ### The Skeleton Smoking Cigarette Transformation
