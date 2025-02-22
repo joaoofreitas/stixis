@@ -188,7 +188,7 @@ class StixisProcessor:
         return {'should_draw': True, 'size': circle_size}
 
     def _draw_optimized_circle(self, draw, center_x, center_y, size):
-        """Draw a perfectly crisp circle without any artifacts."""
+        """Draw a circle without any artifacts."""
         if size <= 0:
             return
             
@@ -214,6 +214,3 @@ class StixisProcessor:
             return self.BRIGHTNESS_MAPPINGS['sigmoid'](brightness)
         else:
             return self.BRIGHTNESS_MAPPINGS['power'](brightness, self.gamma)
-
-    # ... rest of the processing methods remain the same, 
-    # but remove save_image and load_image methods ... 

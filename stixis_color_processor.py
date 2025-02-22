@@ -79,8 +79,8 @@ class StixisColorProcessor:
         self.color_cache[cache_key] = nearest_color
         return nearest_color
     
-    def _draw_pixel_perfect_circle(self, draw, center_x, center_y, size, color):
-        """Draw a perfectly crisp colored circle without any artifacts."""
+    def _draw_circle(self, draw, center_x, center_y, size, color):
+        """Draw a colored circle without any artifacts."""
         if size <= 0:
             return
             
@@ -166,7 +166,7 @@ class StixisColorProcessor:
                         if circle_size > 0:
                             center_x = x + self.grid_size//2
                             center_y = y + self.grid_size//2
-                            self._draw_pixel_perfect_circle(
+                            self._draw_circle(
                                 draw, 
                                 center_x, 
                                 center_y, 
