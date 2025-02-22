@@ -4,4 +4,4 @@ Pillow==11.1.0
 numpy==2.2.3
 scipy==1.15.1
 scikit-image==0.25.1
-scikit-learn==1.6.1  # For color palette extraction in StixisColorProcessor
+gunicorn==23.0.0
